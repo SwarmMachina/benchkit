@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "regression-ci-baseline/v1",
+  "suite": "ws",
+  "benchmark": {
+    "name": "ws-core-ci",
+    "packageName": "@swarmmachina/swm-core",
+    "packageVersion": "1.2.0",
+    "runner": "benchmark/regression-ci.js",
+    "script": "npm run profile:ci -- --suite ws",
+    "framework": "core"
+  },
+  "calibration": {
+    "status": "self-hosted-calibrated",
+    "updatedAt": "2026-06-14",
+    "node": "24.x",
+    "ciRunner": "self-hosted (dedicated, schedutil)",
+    "note": "Calibrated from 4 self-hosted runs. errors is the primary signal; msgPerSec spread is ~11% (light single-threaded load on schedutil), so its floor keeps ~17% margin. rssMB is report-only."
+  },
+  "parameters": {
+    "runs": 3,
+    "warmupSec": 2,
+    "durationSec": 6,
+    "connections": 50,
+    "msgSize": 64,
+    "sampleMs": 250,
+    "cpuProfile": true
+  },
+  "metrics": {
+    "msgPerSec": { "label": "messages", "unit": "msg/s" },
+    "latencyP99Ms": { "label": "p99 round-trip", "unit": "ms" },
+    "errors": { "label": "errors", "unit": "" },
+    "heapMB": { "label": "heap peak", "unit": "MB" },
+    "externalMB": { "label": "external peak", "unit": "MB" },
+    "arrayBuffersMB": { "label": "arrayBuffers peak", "unit": "MB" },
+    "rssMB": { "label": "rss peak", "unit": "MB" }
+  },
+  "tests": {
+    "echo": {
+      "description": "WebSocket echo round-trip (ping-pong)",
+      "observedMedian": {
+        "msgPerSec": 45462,
+        "latencyAvgMs": 1.1,
+        "latencyP97_5Ms": 1.34,
+        "latencyP99Ms": 1.88,
+        "errors": 0,
+        "eluPct": 72.39,
+        "eventLoopDelayP99Ms": 20.07,
+        "rssMB": 60.44,
+        "heapMB": 6.3,
+        "externalMB": 1.79,
+        "arrayBuffersMB": 0.02
+      },
+      "guards": {
+        "errors": { "max": 0 },
+        "msgPerSec": { "min": 36000 },
+        "heapMB": { "max": 14 },
+        "externalMB": { "max": 5 },
+        "arrayBuffersMB": { "max": 2 }
+      },
+      "reportOnly": ["latencyAvgMs", "latencyP97_5Ms", "latencyP99Ms", "eluPct", "eventLoopDelayP99Ms", "rssMB"]
+    }
+  },
+  "cpuProfileGuard": {
+    "profileRequired": true,
+    "minTotalTicks": 100,
+    "maxGcPct": 15,
+    "maxUnaccountedPct": 30,
+    "note": "Sanity check only."
+  }
+}

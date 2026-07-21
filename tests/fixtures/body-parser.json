@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "regression-ci-baseline/v1",
+  "suite": "body-parser",
+  "benchmark": {
+    "name": "body-parser-ci",
+    "packageName": "@swarmmachina/swm-core",
+    "packageVersion": "1.2.0",
+    "runner": "benchmark/regression-ci.js",
+    "script": "npm run profile:ci -- --suite body-parser",
+    "framework": "core"
+  },
+  "calibration": {
+    "status": "self-hosted-calibrated",
+    "updatedAt": "2026-06-14",
+    "node": "24.x",
+    "ciRunner": "self-hosted (dedicated, schedutil)",
+    "note": "Calibrated from 4 self-hosted runs. nsPerByte is the primary guard; memory ceilings catch leaks/bloat. rssMB is report-only."
+  },
+  "parameters": {
+    "size": 1048576,
+    "chunk": 16384,
+    "iters": 10000,
+    "warm": 1000,
+    "cpuProfile": true
+  },
+  "metrics": {
+    "nsPerByte": { "label": "cost", "unit": "ns/byte" },
+    "itersPerSec": { "label": "throughput", "unit": "iters/s" },
+    "mbPerSec": { "label": "bandwidth", "unit": "MiB/s" },
+    "heapMB": { "label": "heap peak", "unit": "MB" },
+    "externalMB": { "label": "external peak", "unit": "MB" },
+    "arrayBuffersMB": { "label": "arrayBuffers peak", "unit": "MB" },
+    "rssMB": { "label": "rss peak", "unit": "MB" }
+  },
+  "tests": {
+    "known": {
+      "description": "BodyParser with known Content-Length",
+      "observedMedian": {
+        "itersPerSec": 5470,
+        "mbPerSec": 5470,
+        "nsPerByte": 0.1744,
+        "rssMB": 175.98,
+        "heapMB": 4.39,
+        "externalMB": 110.82,
+        "arrayBuffersMB": 109.04
+      },
+      "guards": {
+        "nsPerByte": { "max": 0.25 },
+        "heapMB": { "max": 12 },
+        "externalMB": { "max": 150 },
+        "arrayBuffersMB": { "max": 150 }
+      },
+      "reportOnly": ["itersPerSec", "mbPerSec", "rssMB"]
+    },
+    "unknown": {
+      "description": "BodyParser with unknown Content-Length (streamed)",
+      "observedMedian": {
+        "itersPerSec": 2864,
+        "mbPerSec": 2864,
+        "nsPerByte": 0.333,
+        "rssMB": 148.3,
+        "heapMB": 4.11,
+        "externalMB": 88.41,
+        "arrayBuffersMB": 84.4
+      },
+      "guards": {
+        "nsPerByte": { "max": 0.42 },
+        "heapMB": { "max": 12 },
+        "externalMB": { "max": 150 },
+        "arrayBuffersMB": { "max": 150 }
+      },
+      "reportOnly": ["itersPerSec", "mbPerSec", "rssMB"]
+    }
+  },
+  "cpuProfileGuard": {
+    "profileRequired": true,
+    "minTotalTicks": 100,
+    "note": "Sanity check only. GC% is high by design (allocation-heavy), so it is not guarded."
+  }
+}

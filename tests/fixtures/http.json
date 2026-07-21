@@ -1,0 +1,170 @@
+{
+  "schemaVersion": "regression-ci-baseline/v1",
+  "suite": "http",
+  "benchmark": {
+    "name": "http-core-ci",
+    "packageName": "@swarmmachina/swm-core",
+    "packageVersion": "2.0.3",
+    "runner": "benchmark/regression-ci.js",
+    "script": "npm run profile:ci -- --suite http",
+    "framework": "core"
+  },
+  "calibration": {
+    "status": "self-hosted-calibrated",
+    "updatedAt": "2026-07-19",
+    "node": "24.17.x",
+    "ciRunner": "self-hosted (Ubuntu 24.04, Intel Xeon E5-2680 v4, dedicated, schedutil)",
+    "note": "Calibrated from 4 self-hosted series with 3 runs per scenario. Throughput spread was 4-8%; memory was stable. RPS floors sit 11-13% below the slowest series and p99 ceilings tolerate isolated scheduler spikes. rssMB is report-only."
+  },
+  "parameters": {
+    "runs": 3,
+    "warmupSec": 2,
+    "durationSec": 6,
+    "connections": 100,
+    "sampleMs": 250,
+    "cpuProfile": true
+  },
+  "metrics": {
+    "rps": { "label": "RPS", "unit": "req/s" },
+    "latencyP99Ms": { "label": "p99", "unit": "ms" },
+    "errors": { "label": "errors", "unit": "" },
+    "heapMB": { "label": "heap peak", "unit": "MB" },
+    "externalMB": { "label": "external peak", "unit": "MB" },
+    "arrayBuffersMB": { "label": "arrayBuffers peak", "unit": "MB" },
+    "rssMB": { "label": "rss peak", "unit": "MB" }
+  },
+  "tests": {
+    "base-sync": {
+      "description": "GET /base-sync synchronous JSON response hot path",
+      "observedMedian": {
+        "rps": 162571,
+        "latencyAvgMs": 5.87,
+        "latencyP97_5Ms": 6,
+        "latencyP99Ms": 6,
+        "errors": 0,
+        "eluPct": 97.16,
+        "eventLoopDelayP99Ms": 22.1,
+        "rssMB": 73.44,
+        "heapMB": 10.99,
+        "externalMB": 3.63,
+        "arrayBuffersMB": 0.04
+      },
+      "guards": {
+        "rps": { "min": 140000 },
+        "latencyP99Ms": { "max": 14 },
+        "errors": { "max": 0 },
+        "heapMB": { "max": 18 },
+        "externalMB": { "max": 6 },
+        "arrayBuffersMB": { "max": 2 }
+      },
+      "reportOnly": ["latencyAvgMs", "latencyP97_5Ms", "eluPct", "eventLoopDelayP99Ms", "rssMB"]
+    },
+    "base-async": {
+      "description": "GET /base-async asynchronous JSON response hot path",
+      "observedMedian": {
+        "rps": 127269.5,
+        "latencyAvgMs": 7.21,
+        "latencyP97_5Ms": 8,
+        "latencyP99Ms": 9,
+        "errors": 0,
+        "eluPct": 97.19,
+        "eventLoopDelayP99Ms": 23.66,
+        "rssMB": 73.49,
+        "heapMB": 11.07,
+        "externalMB": 3.63,
+        "arrayBuffersMB": 0.04
+      },
+      "guards": {
+        "rps": { "min": 110000 },
+        "latencyP99Ms": { "max": 18 },
+        "errors": { "max": 0 },
+        "heapMB": { "max": 18 },
+        "externalMB": { "max": 6 },
+        "arrayBuffersMB": { "max": 2 }
+      },
+      "reportOnly": ["latencyAvgMs", "latencyP97_5Ms", "eluPct", "eventLoopDelayP99Ms", "rssMB"]
+    },
+    "headers": {
+      "description": "GET /headers response header staging and repeated Set-Cookie path",
+      "observedMedian": {
+        "rps": 117493.5,
+        "latencyAvgMs": 8.06,
+        "latencyP97_5Ms": 9,
+        "latencyP99Ms": 10,
+        "errors": 0,
+        "eluPct": 97.23,
+        "eventLoopDelayP99Ms": 22.82,
+        "rssMB": 77.14,
+        "heapMB": 12.95,
+        "externalMB": 3.63,
+        "arrayBuffersMB": 0.04
+      },
+      "guards": {
+        "rps": { "min": 102000 },
+        "latencyP99Ms": { "max": 20 },
+        "errors": { "max": 0 },
+        "heapMB": { "max": 18 },
+        "externalMB": { "max": 6 },
+        "arrayBuffersMB": { "max": 2 }
+      },
+      "reportOnly": ["latencyAvgMs", "latencyP97_5Ms", "eluPct", "eventLoopDelayP99Ms", "rssMB"]
+    },
+    "headers-prepared": {
+      "description": "GET /headers-prepared prevalidated reusable response headers",
+      "observedMedian": {
+        "rps": 138048,
+        "latencyAvgMs": 7.01,
+        "latencyP97_5Ms": 7,
+        "latencyP99Ms": 8,
+        "errors": 0,
+        "eluPct": 97.25,
+        "eventLoopDelayP99Ms": 22.41,
+        "rssMB": 72.99,
+        "heapMB": 10.92,
+        "externalMB": 3.63,
+        "arrayBuffersMB": 0.04
+      },
+      "guards": {
+        "rps": { "min": 116000 },
+        "latencyP99Ms": { "max": 18 },
+        "errors": { "max": 0 },
+        "heapMB": { "max": 18 },
+        "externalMB": { "max": 6 },
+        "arrayBuffersMB": { "max": 2 }
+      },
+      "reportOnly": ["latencyAvgMs", "latencyP97_5Ms", "eluPct", "eventLoopDelayP99Ms", "rssMB"]
+    },
+    "post-base": {
+      "description": "POST /base JSON body parsing hot path",
+      "observedMedian": {
+        "rps": 33509,
+        "latencyAvgMs": 2.28,
+        "latencyP97_5Ms": 5,
+        "latencyP99Ms": 5,
+        "errors": 0,
+        "eluPct": 97.14,
+        "eventLoopDelayP99Ms": 22.59,
+        "rssMB": 73.98,
+        "heapMB": 10.91,
+        "externalMB": 3.67,
+        "arrayBuffersMB": 0.04
+      },
+      "guards": {
+        "rps": { "min": 27500 },
+        "latencyP99Ms": { "max": 12 },
+        "errors": { "max": 0 },
+        "heapMB": { "max": 18 },
+        "externalMB": { "max": 6 },
+        "arrayBuffersMB": { "max": 2 }
+      },
+      "reportOnly": ["latencyAvgMs", "latencyP97_5Ms", "eluPct", "eventLoopDelayP99Ms", "rssMB"]
+    }
+  },
+  "cpuProfileGuard": {
+    "profileRequired": true,
+    "minTotalTicks": 100,
+    "maxGcPct": 10,
+    "maxUnaccountedPct": 60,
+    "note": "Sanity check only. Unaccounted% is high (~46%) and stable for a network server under load."
+  }
+}

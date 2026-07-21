@@ -1,0 +1,7 @@
+{
+  "extends": "@swarmmachina/standards/tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist"
+  },
+  "include": ["src"]
+}

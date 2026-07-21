@@ -1,0 +1,63 @@
+{
+  "name": "@swarmmachina/benchkit",
+  "version": "0.1.0",
+  "description": "Zero-dependency TypeScript helpers for SwarmMachina benchmarks",
+  "keywords": [
+    "benchmark",
+    "performance",
+    "profiling",
+    "typescript",
+    "swarmmachina",
+    "zero-dependency"
+  ],
+  "author": "SwarmMachina Team",
+  "license": "MPL-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "engines": {
+    "node": "22.x || 24.x"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js",
+      "default": "./dist/*.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SwarmMachina/benchkit.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "check": "prettier . --check && eslint . && npm run check:types",
+    "check:types": "tsc --noEmit",
+    "fix": "prettier . --write && eslint . --fix",
+    "test": "node --experimental-strip-types --test tests/unit/*.test.ts",
+    "release:verify-tag": "node scripts/verify-release.js",
+    "release:gate": "npm run check && npm test && npm run build",
+    "prepublishOnly": "npm run release:gate"
+  },
+  "devDependencies": {
+    "@swarmmachina/standards": "^1.2.0",
+    "@types/node": "24.10.1",
+    "eslint": "10.7.0",
+    "prettier": "3.9.5",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.65.0"
+  }
+}
