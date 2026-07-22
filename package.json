@@ -13,10 +13,11 @@
   "author": "SwarmMachina Team",
   "license": "MPL-2.0",
   "type": "module",
+  "packageManager": "pnpm@11.15.1",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "engines": {
-    "node": "22.x || 24.x"
+    "node": "^22.13.0 || 24.x"
   },
   "exports": {
     ".": {
@@ -24,10 +25,155 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js",
-      "default": "./dist/*.js"
+    "./measurement": {
+      "types": "./dist/measurement/index.d.ts",
+      "import": "./dist/measurement/index.js",
+      "default": "./dist/measurement/index.js"
+    },
+    "./orchestration": {
+      "types": "./dist/orchestration/index.d.ts",
+      "import": "./dist/orchestration/index.js",
+      "default": "./dist/orchestration/index.js"
+    },
+    "./profiling": {
+      "types": "./dist/profiling/index.d.ts",
+      "import": "./dist/profiling/index.js",
+      "default": "./dist/profiling/index.js"
+    },
+    "./regression": {
+      "types": "./dist/regression/index.d.ts",
+      "import": "./dist/regression/index.js",
+      "default": "./dist/regression/index.js"
+    },
+    "./reporting": {
+      "types": "./dist/reporting/index.d.ts",
+      "import": "./dist/reporting/index.js",
+      "default": "./dist/reporting/index.js"
+    },
+    "./results": {
+      "types": "./dist/results/index.d.ts",
+      "import": "./dist/results/index.js",
+      "default": "./dist/results/index.js"
+    },
+    "./statistics": {
+      "types": "./dist/statistics/index.d.ts",
+      "import": "./dist/statistics/index.js",
+      "default": "./dist/statistics/index.js"
+    },
+    "./units": {
+      "types": "./dist/units/index.d.ts",
+      "import": "./dist/units/index.js",
+      "default": "./dist/units/index.js"
+    },
+    "./baseline": {
+      "types": "./dist/regression/baseline.d.ts",
+      "import": "./dist/regression/baseline.js",
+      "default": "./dist/regression/baseline.js"
+    },
+    "./benchmark-result": {
+      "types": "./dist/results/benchmark-result.d.ts",
+      "import": "./dist/results/benchmark-result.js",
+      "default": "./dist/results/benchmark-result.js"
+    },
+    "./bytes-to-mib": {
+      "types": "./dist/units/bytes-to-mib.d.ts",
+      "import": "./dist/units/bytes-to-mib.js",
+      "default": "./dist/units/bytes-to-mib.js"
+    },
+    "./copy-cpu-profiles": {
+      "types": "./dist/profiling/copy-cpu-profiles.d.ts",
+      "import": "./dist/profiling/copy-cpu-profiles.js",
+      "default": "./dist/profiling/copy-cpu-profiles.js"
+    },
+    "./cpu-guard": {
+      "types": "./dist/regression/cpu-guard.d.ts",
+      "import": "./dist/regression/cpu-guard.js",
+      "default": "./dist/regression/cpu-guard.js"
+    },
+    "./ensure-dir": {
+      "types": "./dist/orchestration/ensure-dir.d.ts",
+      "import": "./dist/orchestration/ensure-dir.js",
+      "default": "./dist/orchestration/ensure-dir.js"
+    },
+    "./format": {
+      "types": "./dist/reporting/format.d.ts",
+      "import": "./dist/reporting/format.js",
+      "default": "./dist/reporting/format.js"
+    },
+    "./latency-recorder": {
+      "types": "./dist/measurement/latency-recorder.d.ts",
+      "import": "./dist/measurement/latency-recorder.js",
+      "default": "./dist/measurement/latency-recorder.js"
+    },
+    "./measure-batch": {
+      "types": "./dist/measurement/measure-batch.d.ts",
+      "import": "./dist/measurement/measure-batch.js",
+      "default": "./dist/measurement/measure-batch.js"
+    },
+    "./median": {
+      "types": "./dist/statistics/median.d.ts",
+      "import": "./dist/statistics/median.js",
+      "default": "./dist/statistics/median.js"
+    },
+    "./metric-guard": {
+      "types": "./dist/regression/metric-guard.d.ts",
+      "import": "./dist/regression/metric-guard.js",
+      "default": "./dist/regression/metric-guard.js"
+    },
+    "./metrics": {
+      "types": "./dist/measurement/metrics.d.ts",
+      "import": "./dist/measurement/metrics.js",
+      "default": "./dist/measurement/metrics.js"
+    },
+    "./parse-args": {
+      "types": "./dist/orchestration/parse-args.d.ts",
+      "import": "./dist/orchestration/parse-args.js",
+      "default": "./dist/orchestration/parse-args.js"
+    },
+    "./regression-report": {
+      "types": "./dist/regression/regression-report.d.ts",
+      "import": "./dist/regression/regression-report.js",
+      "default": "./dist/regression/regression-report.js"
+    },
+    "./run-child": {
+      "types": "./dist/orchestration/run-child.d.ts",
+      "import": "./dist/orchestration/run-child.js",
+      "default": "./dist/orchestration/run-child.js"
+    },
+    "./shuffle": {
+      "types": "./dist/orchestration/shuffle.d.ts",
+      "import": "./dist/orchestration/shuffle.js",
+      "default": "./dist/orchestration/shuffle.js"
+    },
+    "./step-summary": {
+      "types": "./dist/reporting/step-summary.d.ts",
+      "import": "./dist/reporting/step-summary.js",
+      "default": "./dist/reporting/step-summary.js"
+    },
+    "./timed": {
+      "types": "./dist/measurement/timed.d.ts",
+      "import": "./dist/measurement/timed.js",
+      "default": "./dist/measurement/timed.js"
+    },
+    "./timed-fn": {
+      "types": "./dist/measurement/timed.d.ts",
+      "import": "./dist/measurement/timed.js",
+      "default": "./dist/measurement/timed.js"
+    },
+    "./v8-prof-parser": {
+      "types": "./dist/profiling/v8-prof-parser.d.ts",
+      "import": "./dist/profiling/v8-prof-parser.js",
+      "default": "./dist/profiling/v8-prof-parser.js"
+    },
+    "./v8-prof-run": {
+      "types": "./dist/profiling/v8-prof-run.d.ts",
+      "import": "./dist/profiling/v8-prof-run.js",
+      "default": "./dist/profiling/v8-prof-run.js"
+    },
+    "./wait-for-message": {
+      "types": "./dist/orchestration/wait-for-message.d.ts",
+      "import": "./dist/orchestration/wait-for-message.js",
+      "default": "./dist/orchestration/wait-for-message.js"
     }
   },
   "files": [
@@ -40,24 +186,31 @@
     "url": "git+https://github.com/SwarmMachina/benchkit.git"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/"
+  },
+  "prettier": "@swarmmachina/standards/prettier",
+  "swmStandards": {
+    "preset": "typescript"
   },
   "scripts": {
-    "build": "tsc",
-    "check": "prettier . --check && eslint . && npm run check:types",
+    "build": "node scripts/clean-dist.js && tsc",
+    "check": "swm-standards check && tsc --noEmit",
     "check:types": "tsc --noEmit",
-    "fix": "prettier . --write && eslint . --fix",
-    "test": "node --experimental-strip-types --test tests/unit/*.test.ts",
+    "fix": "swm-standards fix",
+    "test": "node scripts/clean-dist.js && tsc && tsc -p tsconfig.package-test.json && node --experimental-strip-types --test tests/unit/*.test.ts",
     "release:verify-tag": "node scripts/verify-release.js",
-    "release:gate": "npm run check && npm test && npm run build",
-    "prepublishOnly": "npm run release:gate"
+    "release:verify-published": "node scripts/verify-published.js",
+    "release:publish": "node scripts/publish-release.js",
+    "release:gate": "node scripts/release-gate.js",
+    "prepublishOnly": "node scripts/release-gate.js"
   },
   "devDependencies": {
-    "@swarmmachina/standards": "^1.2.0",
+    "@swarmmachina/standards": "3.0.0",
     "@types/node": "24.10.1",
-    "eslint": "10.7.0",
-    "prettier": "3.9.5",
-    "typescript": "5.9.3",
+    "@typescript/native": "npm:typescript@7.0.2",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
     "typescript-eslint": "8.65.0"
   }
 }

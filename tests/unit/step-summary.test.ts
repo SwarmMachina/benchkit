@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { fmt, mdTable, round } from '../../src/step-summary.ts'
+import { fmt, mdTable, round } from '@swarmmachina/benchkit'
 
 test('round rounds finite values to two decimal places', () => {
   assert.equal(round(1.236), 1.24)

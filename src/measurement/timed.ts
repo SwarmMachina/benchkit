@@ -1,3 +1,5 @@
+import { performance } from 'node:perf_hooks'
+
 export interface TimedResult<T> {
   result: T
   ms: number

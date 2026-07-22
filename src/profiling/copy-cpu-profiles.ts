@@ -1,24 +1,13 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import type { CpuProfile } from './cpu-guard.js'
+import ensureDir from '../orchestration/ensure-dir.js'
+import type { BenchmarkRun, ProfiledBenchmarkResult, ProfiledBenchmarkRow } from '../results/benchmark-result.js'
+import type { CpuProfile } from '../regression/cpu-guard.js'
 import parseV8Profile from './v8-prof-parser.js'
 
-export interface BenchRow {
-  fw: string
-  v8prof: {
-    processedPath?: string
-    logPath?: string
-  } | null
-}
-
-export interface BenchRun {
-  run: number
-  rows: BenchRow[]
-}
-
-export interface Bench {
-  runs: BenchRun[]
-}
+export type BenchRow = ProfiledBenchmarkRow
+export type BenchRun = BenchmarkRun<ProfiledBenchmarkRow>
+export type Bench = ProfiledBenchmarkResult
 
 export default async function copyCpuProfiles(
   bench: Bench,
@@ -29,7 +18,7 @@ export default async function copyCpuProfiles(
   const copied: CpuProfile[] = []
   const cpuDir = path.join(outDir, 'cpu')
 
-  await fs.mkdir(cpuDir, { recursive: true })
+  await ensureDir(cpuDir)
 
   for (const run of bench.runs) {
     for (const row of run.rows) {

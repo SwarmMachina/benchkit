@@ -55,7 +55,7 @@ export default function metricGuard({ cases, results, baselineTests }: MetricGua
         status: 'ok'
       }
 
-      if (!Number.isFinite(value)) {
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
         failures.push(`${name}.${metric}: missing value`)
         row.status = 'FAIL'
       } else {

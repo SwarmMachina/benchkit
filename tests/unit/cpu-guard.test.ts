@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import cpuGuard from '../../src/cpu-guard.ts'
+import { cpuGuard } from '@swarmmachina/benchkit'
 
 const profile = {
   totalTicks: 200,

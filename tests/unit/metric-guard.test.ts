@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import metricGuard from '../../src/metric-guard.ts'
+import { metricGuard } from '@swarmmachina/benchkit'
 
 test('metricGuard accepts values inside min and max bounds', () => {
   assert.deepEqual(

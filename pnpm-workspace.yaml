@@ -1,0 +1,6 @@
+autoInstallPeers: false
+minimumReleaseAgeExclude:
+  - '@swarmmachina/*'
+  - prettier@3.9.6
+saveExact: true
+strictPeerDependencies: true

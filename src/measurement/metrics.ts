@@ -1,5 +1,6 @@
 import os from 'node:os'
 import { monitorEventLoopDelay, performance } from 'node:perf_hooks'
+import { bytesToMiB } from '../units/bytes-to-mib.js'
 
 export interface MetricsStartOptions {
   sampleMs?: number
@@ -31,10 +32,6 @@ export interface MetricsSummary {
   loadPeak: number[]
 }
 
-function mb(bytes: number): number {
-  return bytes / 1024 / 1024
-}
-
 export default class Metrics {
   #running = false
 
@@ -51,8 +48,8 @@ export default class Metrics {
   #peakExternal = 0
   #peakArrayBuffers = 0
 
-  #loadSum = [0, 0, 0]
-  #loadPeak = [0, 0, 0]
+  #loadSum: [number, number, number] = [0, 0, 0]
+  #loadPeak: [number, number, number] = [0, 0, 0]
   #samples = 0
 
   start({ sampleMs }: MetricsStartOptions = {}): void {
@@ -127,10 +124,10 @@ export default class Metrics {
         max: eldMax
       },
       memMB: {
-        rssPeak: mb(this.#peakRss),
-        heapUsedPeak: mb(this.#peakHeap),
-        externalPeak: mb(this.#peakExternal),
-        arrayBuffersPeak: mb(this.#peakArrayBuffers)
+        rssPeak: bytesToMiB(this.#peakRss),
+        heapUsedPeak: bytesToMiB(this.#peakHeap),
+        externalPeak: bytesToMiB(this.#peakExternal),
+        arrayBuffersPeak: bytesToMiB(this.#peakArrayBuffers)
       },
       loadAvg,
       loadPeak: this.#loadPeak
@@ -145,14 +142,14 @@ export default class Metrics {
     this.#peakExternal = Math.max(this.#peakExternal, mu.external)
     this.#peakArrayBuffers = Math.max(this.#peakArrayBuffers, mu.arrayBuffers || 0)
 
-    const load = os.loadavg()
+    const [load1 = 0, load5 = 0, load15 = 0] = os.loadavg()
 
-    this.#loadSum[0] += load[0]
-    this.#loadSum[1] += load[1]
-    this.#loadSum[2] += load[2]
-    this.#loadPeak[0] = Math.max(this.#loadPeak[0], load[0])
-    this.#loadPeak[1] = Math.max(this.#loadPeak[1], load[1])
-    this.#loadPeak[2] = Math.max(this.#loadPeak[2], load[2])
+    this.#loadSum[0] += load1
+    this.#loadSum[1] += load5
+    this.#loadSum[2] += load15
+    this.#loadPeak[0] = Math.max(this.#loadPeak[0], load1)
+    this.#loadPeak[1] = Math.max(this.#loadPeak[1], load5)
+    this.#loadPeak[2] = Math.max(this.#loadPeak[2], load15)
     this.#samples++
   }
 }

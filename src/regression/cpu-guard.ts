@@ -1,4 +1,4 @@
-import type { V8Profile } from './v8-prof-parser.js'
+import type { V8Profile } from '../profiling/v8-prof-parser.js'
 
 export interface CpuProfile {
   test: string

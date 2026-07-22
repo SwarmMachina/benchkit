@@ -9,6 +9,11 @@ export default function parseArgs<T extends object>(
 
   for (let i = 2; i < argv.length; i++) {
     const name = argv[i]
+
+    if (name === undefined) {
+      continue
+    }
+
     const handler = handlers[name]
 
     if (!handler) {

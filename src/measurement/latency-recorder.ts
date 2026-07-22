@@ -12,15 +12,15 @@ export interface LatencyRecorder {
   summary(messages: number): LatencySummary
 }
 
-function percentile(buf: Float64Array, count: number, p: number): number | null {
-  if (!count) {
+function percentileFromBuffer(buffer: Float64Array, sampleCount: number, percentile: number): number | null {
+  if (!sampleCount) {
     return null
   }
 
-  const sorted = Float64Array.prototype.slice.call(buf, 0, count).sort()
-  const idx = Math.min(count - 1, Math.floor((p / 100) * count))
+  const sorted = Float64Array.prototype.slice.call(buffer, 0, sampleCount).sort()
+  const idx = Math.min(sampleCount - 1, Math.floor((percentile / 100) * sampleCount))
 
-  return sorted[idx]
+  return sorted[idx] ?? null
 }
 
 // Running sum drives the average; the bounded ring buffer (last MAX_LAT_SAMPLES)
@@ -45,9 +45,9 @@ export default function createLatencyRecorder(): LatencyRecorder {
     summary(messages) {
       return {
         avgMs: messages ? sum / messages : null,
-        p95Ms: percentile(lat, count, 95),
-        p97_5Ms: percentile(lat, count, 97.5),
-        p99Ms: percentile(lat, count, 99)
+        p95Ms: percentileFromBuffer(lat, count, 95),
+        p97_5Ms: percentileFromBuffer(lat, count, 97.5),
+        p99Ms: percentileFromBuffer(lat, count, 99)
       }
     }
   }

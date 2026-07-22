@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import parseArgs from '../../src/parse-args.ts'
+import { parseArgs } from '@swarmmachina/benchkit'
 
 test('parseArgs copies defaults and consumes handled values', () => {
   const defaults = { runs: 1, verbose: false }

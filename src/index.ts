@@ -1,52 +1,80 @@
-export { BASELINE_SCHEMA_VERSION, isBaseline, validateBaseline } from './baseline.js'
+export { createLatencyRecorder, measureBatch, Metrics, timed } from './measurement/index.js'
+export type {
+  BatchLatencyMetrics,
+  BatchMeasurement,
+  BatchMemoryDeltaMetrics,
+  EventLoopDelayMetrics,
+  LatencyRecorder,
+  LatencySummary,
+  MeasureBatchOptions,
+  MemoryMetrics,
+  MetricsStartOptions,
+  MetricsSummary,
+  TimedResult
+} from './measurement/index.js'
+
+export { ensureDir, parseArgs, runChild, shuffle, waitForMessage } from './orchestration/index.js'
+export type { ArgHandler } from './orchestration/index.js'
+
+export { copyCpuProfiles, parseV8Profile, pickNewestLog, processV8Profile } from './profiling/index.js'
+export type {
+  Bench,
+  BenchRow,
+  BenchRun,
+  ProcessedV8Profile,
+  V8Profile,
+  V8ProfileOptions,
+  V8ProfileRow,
+  V8ProfileSummaryEntry
+} from './profiling/index.js'
+
+export {
+  BASELINE_SCHEMA_VERSION,
+  cpuGuard,
+  isBaseline,
+  metricGuard,
+  renderRegressionMarkdown,
+  validateBaseline
+} from './regression/index.js'
 export type {
   Baseline,
   BaselineBenchmark,
   BaselineCalibration,
   BaselineMetric,
-  BaselineValidationResult
-} from './baseline.js'
-
-export { default as copyCpuProfiles } from './copy-cpu-profiles.js'
-export type { Bench, BenchRow, BenchRun } from './copy-cpu-profiles.js'
-
-export { default as cpuGuard } from './cpu-guard.js'
-export type { CpuGuardConfig, CpuGuardParams, CpuGuardResult, CpuGuardRow, CpuProfile } from './cpu-guard.js'
-
-export { default as ensureDir } from './ensure-dir.js'
-export { fmtBytes, fmtNum, formatYmdHms, msToHuman } from './format.js'
-
-export { default as createLatencyRecorder } from './latency-recorder.js'
-export type { LatencyRecorder, LatencySummary } from './latency-recorder.js'
-
-export { default as median } from './median.js'
-
-export { default as metricGuard } from './metric-guard.js'
-export type {
+  BaselineValidationResult,
+  CpuGuardConfig,
+  CpuGuardParams,
+  CpuGuardResult,
+  CpuGuardRow,
+  CpuProfile,
   MetricBound,
   MetricGuardBaselineTest,
   MetricGuardParams,
   MetricGuardResult,
-  MetricGuardRow
-} from './metric-guard.js'
+  MetricGuardRow,
+  RegressionReportInput
+} from './regression/index.js'
 
-export { default as Metrics } from './metrics.js'
-export type { EventLoopDelayMetrics, MemoryMetrics, MetricsStartOptions, MetricsSummary } from './metrics.js'
+export { appendStepSummary, fmt, fmtBytes, fmtNum, formatYmdHms, mdTable, msToHuman, round } from './reporting/index.js'
 
-export { default as parseArgs } from './parse-args.js'
-export type { ArgHandler } from './parse-args.js'
+export type {
+  BenchmarkProfileArtifacts,
+  BenchmarkResult,
+  BenchmarkRun,
+  FrameworkBenchmarkRow,
+  ProfiledBenchmarkResult,
+  ProfiledBenchmarkRow
+} from './results/index.js'
 
-export { default as runChild } from './run-child.js'
-export { default as shuffle } from './shuffle.js'
-export { appendStepSummary, fmt, mdTable, round } from './step-summary.js'
+export {
+  distribution,
+  finiteMedian,
+  median,
+  metricMedians,
+  percentDelta,
+  quantileLinear,
+  quantileNearestRank
+} from './statistics/index.js'
+export type { DistributionSummary, MetricRecord, NullableNumber } from './statistics/index.js'
 
-export { default as timed } from './timed-fn.js'
-export type { TimedResult } from './timed-fn.js'
-
-export { default as parseV8Profile } from './v8-prof-parser.js'
-export type { V8Profile, V8ProfileOptions, V8ProfileRow, V8ProfileSummaryEntry } from './v8-prof-parser.js'
-
-export { pickNewestLog, processV8Profile } from './v8-prof-run.js'
-export type { ProcessedV8Profile } from './v8-prof-run.js'
-
-export { default as waitForMessage } from './wait-for-message.js'
+export { bytesToMiB } from './units/index.js'

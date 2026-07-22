@@ -66,10 +66,16 @@ function parseHeader(lines: string[]): V8ProfileHeader {
     return {}
   }
 
+  const [, totalTicks, unaccountedTicks, excludedTicks] = match
+
+  if (totalTicks === undefined || unaccountedTicks === undefined || excludedTicks === undefined) {
+    return {}
+  }
+
   return {
-    totalTicks: Number(match[1]),
-    unaccountedTicks: Number(match[2]),
-    excludedTicks: Number(match[3])
+    totalTicks: Number(totalTicks),
+    unaccountedTicks: Number(unaccountedTicks),
+    excludedTicks: Number(excludedTicks)
   }
 }
 
@@ -80,9 +86,10 @@ function parseSections(lines: string[], cwd: string): Map<string, V8ProfileRow[]
 
   for (const line of lines) {
     const sectionMatch = line.match(/^\s+\[(.+?)\]:\s*$/)
+    const sectionName = sectionMatch?.[1]
 
-    if (sectionMatch) {
-      section = sectionMatch[1]
+    if (sectionName !== undefined) {
+      section = sectionName
       sections.set(section, [])
       continue
     }
@@ -94,7 +101,7 @@ function parseSections(lines: string[], cwd: string): Map<string, V8ProfileRow[]
     const row = parseRow(line, cwd)
 
     if (row) {
-      sections.get(section)!.push(row)
+      sections.get(section)?.push(row)
     }
   }
 
@@ -104,15 +111,21 @@ function parseSections(lines: string[], cwd: string): Map<string, V8ProfileRow[]
 function parseRow(line: string, cwd: string): V8ProfileRow | null {
   const match = line.match(/^\s*(\d+)\s+([\d.]+)%\s+(?:(\d+(?:\.\d+)?)%\s+)?(.+?)\s*$/)
 
-  if (!match || match[4] === 'name') {
+  if (!match) {
+    return null
+  }
+
+  const [, ticks, totalPct, nonlibPct, name] = match
+
+  if (ticks === undefined || totalPct === undefined || name === undefined || name === 'name') {
     return null
   }
 
   return {
-    ticks: Number(match[1]),
-    totalPct: Number(match[2]),
-    nonlibPct: match[3] == null ? null : Number(match[3]),
-    name: normalizeName(match[4], cwd)
+    ticks: Number(ticks),
+    totalPct: Number(totalPct),
+    nonlibPct: nonlibPct == null ? null : Number(nonlibPct),
+    name: normalizeName(name, cwd)
   }
 }
 

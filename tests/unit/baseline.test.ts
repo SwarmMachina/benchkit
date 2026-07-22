@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 import test from 'node:test'
-import { isBaseline, validateBaseline } from '../../src/baseline.ts'
+import { isBaseline, validateBaseline } from '@swarmmachina/benchkit'
 
 const fixtures = ['http.json', 'ws.json', 'body-parser.json']
 

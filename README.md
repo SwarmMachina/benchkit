@@ -1,88 +1,191 @@
 # @swarmmachina/benchkit
 
-Zero-runtime-dependency TypeScript helpers for SwarmMachina benchmark and regression pipelines. The package is ESM-only and publishes compiled JavaScript, declarations, declaration maps, and source maps from `dist/`.
+Zero-runtime-dependency benchmark, profiling and regression helpers for
+SwarmMachina projects. The package provides typed building blocks without
+coupling benchmark suites to a transport, framework or load generator.
+
+## Includes
+
+- Statistical primitives with explicit quantile algorithms
+- Process, memory, ELU, event-loop delay and latency measurement
+- Typed benchmark result contracts
+- Baseline validation and metric/CPU regression guards
+- V8 CPU profile processing
+- Child-process orchestration and GitHub step-summary reporting
+- ESM JavaScript, TypeScript declarations and source maps
+
+## Runtime
+
+- Node.js 22.13+ or 24
+- Native ES modules
+- No runtime dependencies
 
 ## Installation
 
-Install it in the development contour:
+Install as a development dependency:
 
 ```bash
-npm install --save-dev @swarmmachina/benchkit
+pnpm add -D @swarmmachina/benchkit
 ```
-
-Node.js 22.x and 24.x are supported.
 
 ## Usage
 
-JavaScript consumers can use the root export or a subpath export:
-
-```js
-import { median, metricGuard } from '@swarmmachina/benchkit'
-import Metrics from '@swarmmachina/benchkit/metrics'
-```
-
-TypeScript consumers get the same runtime API and published declarations:
+The complete public API is available from the package root:
 
 ```ts
-import metricGuard, { type MetricGuardParams, type MetricGuardResult } from '@swarmmachina/benchkit/metric-guard'
+import { measureBatch, median, metricGuard, type BenchmarkResult } from '@swarmmachina/benchkit'
 
-export function guardMetrics(params: MetricGuardParams): MetricGuardResult {
-  return metricGuard(params)
+const result: BenchmarkResult = {
+  runs: [{ run: 1, rows: [{ fw: 'core' }] }]
 }
+
+const throughputMedian = median([101_000, 99_000, 100_000])
+const guard = metricGuard({
+  cases: ['base'],
+  results: { base: { rps: throughputMedian } },
+  baselineTests: { base: { guards: { rps: { min: 95_000 } } } }
+})
+
+const measured = await measureBatch({
+  operations: 3,
+  run: async () => {
+    await Promise.resolve()
+    return [0.4, 0.5, 0.6]
+  }
+})
+
+console.log(result.runs.length, guard.failures, measured.operationsPerSecond)
 ```
+
+Domain exports are available when a narrower import surface is preferred:
+
+```ts
+import { measureBatch, Metrics } from '@swarmmachina/benchkit/measurement'
+import { metricGuard, renderRegressionMarkdown } from '@swarmmachina/benchkit/regression'
+import { median, quantileLinear } from '@swarmmachina/benchkit/statistics'
+import { bytesToMiB } from '@swarmmachina/benchkit/units'
+```
+
+Existing module-level imports such as `@swarmmachina/benchkit/metrics` and
+`@swarmmachina/benchkit/metric-guard` remain supported through explicit package
+exports. The physical `dist/` layout is not part of the public contract.
 
 ## Modules
 
-| Subpath             | Exports                                           | Purpose                                                       |
-| ------------------- | ------------------------------------------------- | ------------------------------------------------------------- |
-| `baseline`          | `validateBaseline`, `isBaseline`, baseline types  | Validate committed regression baseline files without throwing |
-| `copy-cpu-profiles` | `copyCpuProfiles`, bench result types             | Copy and parse V8 CPU profile artifacts                       |
-| `cpu-guard`         | `cpuGuard`, CPU guard/profile types               | Enforce CPU profile sanity thresholds                         |
-| `ensure-dir`        | `ensureDir`                                       | Create a directory recursively                                |
-| `format`            | `fmtBytes`, `fmtNum`, `formatYmdHms`, `msToHuman` | Format benchmark values and timestamps                        |
-| `latency-recorder`  | `createLatencyRecorder`, latency types            | Record bounded latency samples and percentiles                |
-| `median`            | `median`                                          | Compute the median without mutating the input                 |
-| `metric-guard`      | `metricGuard`, metric guard types                 | Enforce min/max regression bounds                             |
-| `metrics`           | `Metrics`, metrics types                          | Sample process, memory, ELU, delay, and host load metrics     |
-| `parse-args`        | `parseArgs`, `ArgHandler`                         | Parse benchmark CLI flags with explicit handlers              |
-| `run-child`         | `runChild`                                        | Run a Node child process and reject on failure                |
-| `shuffle`           | `shuffle`                                         | Shuffle an array in place for AB/BA balancing                 |
-| `step-summary`      | `appendStepSummary`, `round`, `fmt`, `mdTable`    | Build and publish GitHub step summaries                       |
-| `timed-fn`          | `timed`, `TimedResult`                            | Time sync or async functions                                  |
-| `v8-prof-parser`    | `parseV8Profile`, V8 profile types                | Parse `node --prof-process` text output                       |
-| `v8-prof-run`       | `pickNewestLog`, `processV8Profile`               | Locate and process V8 log files                               |
-| `wait-for-message`  | `waitForMessage`                                  | Wait for a matching child-process IPC message                 |
+| Subpath         | Purpose                                                         |
+| --------------- | --------------------------------------------------------------- |
+| `measurement`   | Runtime metrics, latency recording, batch measurement and time  |
+| `orchestration` | CLI parsing, directories, child processes and run ordering      |
+| `profiling`     | V8 log processing, parsing and CPU profile artifact collection  |
+| `regression`    | Baseline validation, guards and Markdown regression reports     |
+| `reporting`     | Value formatting, Markdown tables and GitHub step summaries     |
+| `results`       | Generic typed benchmark result and profiling artifact contracts |
+| `statistics`    | Median, distributions, metric medians and percentage deltas     |
+| `units`         | Unit conversions shared by measurement and reporting code       |
 
-Every module is also available as a named export from `@swarmmachina/benchkit`.
+Every domain export is also available as a named export from
+`@swarmmachina/benchkit`.
 
-## Baseline validation
+## Statistics
 
-`validateBaseline(value)` returns `{ ok, errors }` and never throws. `isBaseline(value)` is the corresponding TypeScript type guard when direct narrowing is needed.
+Percentile semantics are explicit because benchmark tools use different
+algorithms:
+
+- `quantileLinear(values, q)` interpolates between adjacent samples.
+- `quantileNearestRank(values, q)` selects the nearest-rank sample.
+- `finiteMedian(values)` ignores null, missing and non-finite samples.
+- `percentDelta(candidate, reference)` uses the reference as the denominator.
+
+Quantiles use values from `0` to `1`. Statistical functions do not round their
+results; apply presentation rounding in the reporting layer.
+
+## Batch measurement
+
+`measureBatch` records wall time, operations per second, ELU, memory deltas and
+nearest-rank p50/p95/p99 latency. Setup and stabilization remain explicit through
+the optional `before` hook; the helper never forces garbage collection.
 
 ```ts
-import { isBaseline, validateBaseline } from '@swarmmachina/benchkit/baseline'
+import { measureBatch } from '@swarmmachina/benchkit/measurement'
 
-const result = validateBaseline(value)
-
-if (!result.ok) {
-  console.error(result.errors)
-}
-
-if (isBaseline(value)) {
-  console.log(value.benchmark.name)
-}
+const result = await measureBatch({
+  operations: 10_000,
+  before: () => new Promise<void>((resolve) => setImmediate(resolve)),
+  run: () => runScenario()
+})
 ```
+
+The scenario returns latency samples in milliseconds. Scenario names,
+concurrency and transport-specific metadata stay in the consuming benchmark.
+
+## Regression reports
+
+`renderRegressionMarkdown` combines `MetricGuardResult` and `CpuGuardResult`
+without writing files or logging. The caller controls where the report is sent.
+
+```ts
+import { cpuGuard, metricGuard, renderRegressionMarkdown } from '@swarmmachina/benchkit/regression'
+
+const markdown = renderRegressionMarkdown({
+  suite: 'http',
+  metric: metricGuard(metricInput),
+  cpu: cpuGuard(cpuInput)
+})
+```
+
+`validateBaseline(value)` returns `{ ok, errors }` and never throws.
+`isBaseline(value)` is the corresponding TypeScript type guard.
+
+## Directory structure
+
+```text
+src/
+├── measurement/
+├── orchestration/
+├── profiling/
+├── regression/
+├── reporting/
+├── results/
+├── statistics/
+├── units/
+└── index.ts
+```
+
+Each directory owns a cohesive domain and exposes a local `index.ts` barrel.
+The root barrel composes those domains into the package API.
 
 ## Development
 
+The repository pins pnpm 11.15.1 through the `packageManager` field. Corepack
+and CI use that exact version. TypeScript compilation uses the native 7.0.2
+compiler, while TypeScript-aware linting uses the supported TypeScript 6 API
+sidecar prescribed by `@swarmmachina/standards`.
+
 ```bash
-npm run check
-npm test
-npm run build
-npm pack --dry-run
+pnpm install --frozen-lockfile
+pnpm check
+pnpm test
+pnpm build
+pnpm pack --dry-run
 ```
 
-Tests execute TypeScript sources directly with Node type stripping. The independent type-check and build steps verify declarations and emitted JavaScript.
+Tests run against the compiled package exports. The build starts from a clean
+`dist/`, and the type-check independently validates the TypeScript sources.
+
+## Release
+
+CI publishes only tags matching the package version (`vX.Y.Z`). The tagged
+commit must belong to `master`, and the package must pass checks, unit tests and
+builds on Node.js 22 and 24 before publication.
+
+Manual workflow dispatch runs the gates without publishing. Package publication
+is performed by CI with npm provenance and GitHub OIDC; do not publish from a
+local workstation. The release workflow fails closed if the repository is not
+public, because npm cannot generate provenance for a public package from a
+private GitHub repository. After publication, CI waits for npm registry
+propagation and verifies the published SLSA provenance attestation. Publish is
+idempotent: rerunning the tag workflow skips an existing version only when its
+provenance is valid.
 
 ## License
 

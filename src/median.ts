@@ -1,6 +1,0 @@
-export default function median(values: number[]): number {
-  const a = values.toSorted((x, y) => x - y)
-  const mid = (a.length / 2) | 0
-
-  return a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2
-}
