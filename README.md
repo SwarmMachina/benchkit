@@ -86,4 +86,8 @@ Tests execute TypeScript sources directly with Node type stripping. The independ
 
 ## License
 
-MPL-2.0
+Licensed under the MPL-2.0 License.
+
+Copyright Contributors to SwarmMachina.
+
+See the [LICENSE](LICENSE) file for details.
