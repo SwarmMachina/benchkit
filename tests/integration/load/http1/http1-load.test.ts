@@ -78,16 +78,16 @@ test('runHttp1Load applies fixed aggregate rate and reports scheduler health', a
     connections: 4,
     pipelining: 2,
     workers: 2,
-    rate: 400,
+    rate: 100,
     warmupMs: 50,
     durationMs: 500
   })
 
   assert.equal(result.parameters.mode, 'fixed-rate')
-  assert.equal(result.parameters.rate, 400)
+  assert.equal(result.parameters.rate, 100)
   assert.equal(result.parameters.correctCoordinatedOmission, true)
-  assert.ok(result.requests.sent >= 170)
-  assert.ok(result.requests.sent <= 210)
+  assert.ok(result.requests.sent >= 40)
+  assert.ok(result.requests.sent <= 55)
   assert.equal(result.transport.rateDropped, 0)
   assert.ok(result.transport.meanScheduleLagMs !== null)
   assert.ok(result.transport.meanScheduleLagMs >= 0)

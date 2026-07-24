@@ -18,13 +18,13 @@
   },
   "packageManager": "pnpm@11.15.1",
   "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/types.d.ts",
   "engines": {
     "node": "^22.13.0 || 24.x"
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/types.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },

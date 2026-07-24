@@ -63,8 +63,10 @@ try {
   })
 
   const installedPackage = path.join(consumer, 'node_modules', '@swarmmachina', 'benchkit')
+  const rootDeclarations = fs.readFileSync(path.join(installedPackage, 'dist/types.d.ts'), 'utf8')
   const http1Declarations = fs.readFileSync(path.join(installedPackage, 'dist/load/http1/types.d.ts'), 'utf8')
 
+  assert.match(rootDeclarations, /export \* from '\.\/index\.js'/)
   assert.match(http1Declarations, /Options accepted by.*runHttp1Load/s)
   assert.match(http1Declarations, /@default `10_000`/)
   assert.match(http1Declarations, /Fixed-rate arrivals dropped because no pipeline capacity was available/)

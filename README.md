@@ -198,6 +198,8 @@ physical `dist/` layout is not public API.
 Every published type, interface, class, property, and method is documented in
 the generated declarations. `pnpm run check:type-docs` resolves the public
 surface from `package.json#exports` and rejects undocumented type contracts.
+The package-level declaration entrypoint is emitted as `dist/types.d.ts`;
+domain declarations remain colocated below `dist/`.
 
 ## Runtime design
 
