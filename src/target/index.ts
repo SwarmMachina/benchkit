@@ -1,2 +1,2 @@
-export { createTargetRuntime } from './runtime.js'
-export type { TargetReadyPayload, TargetRuntime, TargetRuntimeOptions } from './runtime.js'
+export { TargetRuntime } from './runtime.js'
+export type { TargetReadyPayload, TargetRuntimeOptions } from './runtime.js'

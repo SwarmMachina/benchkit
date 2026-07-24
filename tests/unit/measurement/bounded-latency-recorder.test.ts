@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { createBoundedLatencyRecorder, quantileNearestRank, type BoundedLatencySummary } from '@swarmmachina/benchkit'
+import { BoundedLatencyRecorder, quantileNearestRank, type BoundedLatencySummary } from '@swarmmachina/benchkit'
 
 test('bounded recorder approximates nearest-rank percentiles on a realistic distribution', () => {
   const samples = Array.from({ length: 50_000 }, (_, index) => {
@@ -12,7 +12,7 @@ test('bounded recorder approximates nearest-rank percentiles on a realistic dist
 
   samples.push(40, 75, 120, 250, 900)
 
-  const recorder = createBoundedLatencyRecorder({
+  const recorder = new BoundedLatencyRecorder({
     lowestDiscernibleMs: 0.001,
     highestTrackableMs: 1_000,
     relativeAccuracy: 0.005
@@ -38,10 +38,10 @@ test('bounded recorder merges worker snapshots without raw samples', () => {
     highestTrackableMs: 100,
     relativeAccuracy: 0.01
   }
-  const workerA = createBoundedLatencyRecorder(options)
-  const workerB = createBoundedLatencyRecorder(options)
-  const merged = createBoundedLatencyRecorder(options)
-  const direct = createBoundedLatencyRecorder(options)
+  const workerA = new BoundedLatencyRecorder(options)
+  const workerB = new BoundedLatencyRecorder(options)
+  const merged = new BoundedLatencyRecorder(options)
+  const direct = new BoundedLatencyRecorder(options)
 
   for (let value = 1; value <= 10_000; value++) {
     const latency = 0.01 + (value % 400) / 10
@@ -59,7 +59,7 @@ test('bounded recorder merges worker snapshots without raw samples', () => {
 })
 
 test('bounded recorder reports invalid and out-of-range samples', () => {
-  const recorder = createBoundedLatencyRecorder({
+  const recorder = new BoundedLatencyRecorder({
     lowestDiscernibleMs: 0.1,
     highestTrackableMs: 10
   })
@@ -105,10 +105,10 @@ test('bounded recorder reports invalid and out-of-range samples', () => {
 })
 
 test('bounded recorder validates configuration and merged snapshots', () => {
-  assert.throws(() => createBoundedLatencyRecorder({ relativeAccuracy: 1 }), RangeError)
+  assert.throws(() => new BoundedLatencyRecorder({ relativeAccuracy: 1 }), RangeError)
 
-  const source = createBoundedLatencyRecorder({ highestTrackableMs: 10 })
-  const target = createBoundedLatencyRecorder({ highestTrackableMs: 20 })
+  const source = new BoundedLatencyRecorder({ highestTrackableMs: 10 })
+  const target = new BoundedLatencyRecorder({ highestTrackableMs: 20 })
 
   assert.throws(() => target.merge(source.snapshot()), /does not match/)
 

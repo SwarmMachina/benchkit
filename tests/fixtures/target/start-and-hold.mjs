@@ -1,9 +1,9 @@
 import fs from 'node:fs/promises'
-import { createTargetProvider } from '../../../dist/index.js'
+import { TargetProvider } from '../../../dist/index.js'
 
 const cwd = new URL('../../../', import.meta.url)
 const pidFile = process.argv[2]
-const provider = createTargetProvider({
+const provider = new TargetProvider({
   mode: 'local',
   cwd: cwd.pathname,
   timeouts: {

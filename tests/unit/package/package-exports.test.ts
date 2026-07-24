@@ -32,7 +32,7 @@ test('new benchmark primitives are available through explicit package exports', 
       ['BENCHMARK_ARTIFACT_SCHEMA_VERSION', 'createBenchmarkArtifact', 'writeBenchmarkArtifact']
     ],
     ['@swarmmachina/benchkit/batch-measurement-report', ['renderBatchMeasurementsMarkdown']],
-    ['@swarmmachina/benchkit/bounded-latency-recorder', ['createBoundedLatencyRecorder']],
+    ['@swarmmachina/benchkit/bounded-latency-recorder', ['BoundedLatencyRecorder']],
     ['@swarmmachina/benchkit/delay', ['default']],
     ['@swarmmachina/benchkit/get-free-port', ['default', 'getFreePort']],
     ['@swarmmachina/benchkit/load/http1', ['runHttp1Load']],

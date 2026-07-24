@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   ConfigurationError,
-  createTargetProvider,
+  TargetProvider,
   UnsupportedFeatureError,
   VersionMismatchError
 } from '@swarmmachina/benchkit'
@@ -14,7 +14,7 @@ function encode(value: unknown): string {
 }
 
 test('provider keeps bind and connect addresses distinct and rejects wildcard connect hosts', () => {
-  const provider = createTargetProvider({
+  const provider = new TargetProvider({
     mode: 'ssh',
     bindHost: '0.0.0.0',
     connectHost: '10.10.0.2',
@@ -26,7 +26,7 @@ test('provider keeps bind and connect addresses distinct and rejects wildcard co
 
   assert.throws(
     () =>
-      createTargetProvider({
+      new TargetProvider({
         mode: 'ssh',
         connectHost: '0.0.0.0',
         ssh: { destination: 'bench@host', cwd: '/opt/project' }
@@ -54,7 +54,7 @@ test('agent configuration validates protocol and package versions', () => {
 })
 
 test('remote profiling fails before SSH is started', async () => {
-  const provider = createTargetProvider({
+  const provider = new TargetProvider({
     mode: 'ssh',
     connectHost: '10.10.0.2',
     ssh: { destination: 'bench@10.10.0.2', cwd: '/opt/swm-core' }

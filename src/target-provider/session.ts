@@ -1,5 +1,5 @@
 import net from 'node:net'
-import { InvalidStateError, ProtocolError, TargetUnreachableError } from '../control/errors.js'
+import { InvalidStateError, ProtocolError, TargetUnreachableError, TimeoutError } from '../control/errors.js'
 import { TargetStateMachine, type TargetState } from '../control/state-machine.js'
 import type { MetricsStartOptions, MetricsSummary } from '../measurement/metrics.js'
 import type { TimeoutOptions } from '../control/config.js'
@@ -29,6 +29,32 @@ function probe(endpoint: TargetEndpoint, timeoutMs: number): Promise<void> {
       reject(error)
     })
   })
+}
+
+async function verifyReachability(
+  verify: NonNullable<ReachabilityOptions['verify']>,
+  endpoint: TargetEndpoint,
+  timeoutMs: number
+): Promise<void> {
+  const controller = new AbortController()
+
+  let timer: ReturnType<typeof setTimeout> | undefined
+
+  try {
+    await Promise.race([
+      Promise.resolve().then(() => verify(endpoint, controller.signal)),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => {
+          const error = new TimeoutError('target reachability verification', timeoutMs)
+
+          controller.abort(error)
+          reject(error)
+        }, timeoutMs)
+      })
+    ])
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export class ManagedTargetSession implements TargetSession {
@@ -107,7 +133,13 @@ export class ManagedTargetSession implements TargetSession {
         await probe(this.endpoint, Math.min(1_000, remaining))
 
         if (verify) {
-          await verify(this.endpoint)
+          const verificationRemainingMs = deadline - performance.now()
+
+          if (verificationRemainingMs <= 0) {
+            throw new TimeoutError('target reachability verification', timeoutMs)
+          }
+
+          await verifyReachability(verify, this.endpoint, verificationRemainingMs)
         }
 
         return

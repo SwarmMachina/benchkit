@@ -8,7 +8,7 @@ import test from 'node:test'
 import {
   BENCHKIT_VERSION,
   PROTOCOL_VERSION,
-  createTargetProvider,
+  TargetProvider,
   TargetUnreachableError,
   TimeoutError
 } from '../../../dist/index.js'
@@ -40,7 +40,7 @@ async function waitFor(condition: () => boolean | Promise<boolean>, timeoutMs = 
 }
 
 test('local stdio agent runs target readiness, metrics, and shutdown lifecycle', async () => {
-  const provider = createTargetProvider({
+  const provider = new TargetProvider({
     mode: 'local',
     cwd: root,
     timeouts: { shutdownGraceMs: 300, killMs: 300 }
@@ -67,7 +67,7 @@ test('local stdio agent runs target readiness, metrics, and shutdown lifecycle',
 test('target readiness timeout cleans up a started fixture process', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'benchkit-timeout-'))
   const pidFile = path.join(directory, 'target.pid')
-  const provider = createTargetProvider({
+  const provider = new TargetProvider({
     mode: 'local',
     cwd: root,
     timeouts: {
@@ -92,7 +92,7 @@ test('target readiness timeout cleans up a started fixture process', async () =>
 })
 
 test('startup failures expose bounded target diagnostics', async () => {
-  const provider = createTargetProvider({ mode: 'local', cwd: root })
+  const provider = new TargetProvider({ mode: 'local', cwd: root })
 
   await assert.rejects(
     provider.start({
@@ -112,7 +112,7 @@ test('startup failures expose bounded target diagnostics', async () => {
 })
 
 test('reachability failure contains bind/connect diagnostics', async () => {
-  const provider = createTargetProvider({
+  const provider = new TargetProvider({
     mode: 'local',
     cwd: root,
     connectHost: '127.0.0.2'
@@ -129,6 +129,35 @@ test('reachability failure contains bind/connect diagnostics', async () => {
 
       return true
     })
+  } finally {
+    await session.stop()
+  }
+})
+
+test('reachability deadline bounds a stalled application verification', async () => {
+  const provider = new TargetProvider({ mode: 'local', cwd: root })
+  const session = await provider.start({ entrypoint: './tests/fixtures/target/target.mjs' })
+
+  let signal: AbortSignal | undefined
+
+  const startedAt = performance.now()
+
+  try {
+    await assert.rejects(
+      session.waitReachable({
+        timeoutMs: 50,
+        retryMs: 10,
+        verify: (_endpoint, currentSignal) => {
+          signal = currentSignal
+
+          return new Promise<void>(() => {})
+        }
+      }),
+      TargetUnreachableError
+    )
+
+    assert.ok(performance.now() - startedAt < 500)
+    assert.equal(signal?.aborted, true)
   } finally {
     await session.stop()
   }
@@ -223,7 +252,7 @@ test(
   'real SSH transport lifecycle',
   { skip: !process.env.BENCHKIT_SSH_DESTINATION || !process.env.BENCHKIT_SSH_CWD },
   async () => {
-    const provider = createTargetProvider({
+    const provider = new TargetProvider({
       mode: 'ssh',
       connectHost: process.env.BENCHKIT_SSH_CONNECT_HOST ?? '127.0.0.1',
       ssh: {

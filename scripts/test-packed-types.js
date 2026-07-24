@@ -44,15 +44,15 @@ try {
   fs.writeFileSync(
     path.join(consumer, 'consumer.ts'),
     [
-      "import { createTargetProvider, type TargetSession } from '@swarmmachina/benchkit'",
-      "import { createBoundedLatencyRecorder } from '@swarmmachina/benchkit/measurement'",
-      "import { createTargetRuntime } from '@swarmmachina/benchkit/target'",
+      "import { TargetProvider, type TargetSession } from '@swarmmachina/benchkit'",
+      "import { BoundedLatencyRecorder } from '@swarmmachina/benchkit/measurement'",
+      "import { TargetRuntime } from '@swarmmachina/benchkit/target'",
       "import getFreePort from '@swarmmachina/benchkit/get-free-port'",
       '',
-      "const provider = createTargetProvider({ mode: 'local' })",
+      "const provider = new TargetProvider({ mode: 'local' })",
       'const session = undefined as TargetSession | undefined',
       '',
-      'void [provider, session, createBoundedLatencyRecorder(), createTargetRuntime(), getFreePort]',
+      'void [provider, session, new BoundedLatencyRecorder(), new TargetRuntime(), getFreePort]',
       ''
     ].join('\n')
   )

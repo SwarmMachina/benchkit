@@ -50,8 +50,12 @@ export interface ReachabilityOptions {
   /** Delay between failed connection attempts in milliseconds. */
   retryMs?: number
 
-  /** Optional application-level readiness check run after TCP connects. */
-  verify?: (endpoint: TargetEndpoint) => void | Promise<void>
+  /**
+   * Optional application-level readiness check run after TCP connects.
+   *
+   * The signal aborts when the overall reachability deadline expires.
+   */
+  verify?: (endpoint: TargetEndpoint, signal: AbortSignal) => void | Promise<void>
 }
 
 /** Lifecycle and metrics handle for one managed target process. */
@@ -131,21 +135,6 @@ export interface SshTargetProviderOptions extends CommonProviderOptions {
 
 /** Local or SSH managed-target provider configuration. */
 export type TargetProviderOptions = LocalTargetProviderOptions | SshTargetProviderOptions
-
-/** Factory-owned configuration capable of starting target sessions. */
-export interface TargetProvider {
-  /** Selected local or SSH transport mode. */
-  readonly mode: TargetProviderOptions['mode']
-
-  /** Address supplied to the target process for listening. */
-  readonly bindHost: string
-
-  /** Address used by the load generator. */
-  readonly connectHost: string
-
-  /** Starts a target and resolves after IPC readiness. */
-  start(options: TargetStartOptions): Promise<TargetSession>
-}
 
 /** Normalized configuration encoded into the target agent process. */
 export interface AgentConfiguration {

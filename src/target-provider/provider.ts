@@ -15,8 +15,8 @@ import type {
   AgentConfiguration,
   ResolvedTargetStart,
   TargetProfileOptions,
-  TargetProvider,
   TargetProviderOptions,
+  TargetSession,
   TargetStartOptions,
   TargetStartResponse
 } from './types.js'
@@ -90,10 +90,7 @@ function resolveAgentCommand(cwd: string, command: string | undefined): string {
   return validateAgentCommand(command ?? path.posix.join(cwd, 'node_modules/.bin/benchkit-agent'))
 }
 
-function createAgentConfiguration(
-  diagnosticsMaxBytes: number,
-  timeouts: TimeoutOptions
-): { value: AgentConfiguration; encoded: string } {
+function encodeAgentConfiguration(diagnosticsMaxBytes: number, timeouts: TimeoutOptions): string {
   const value: AgentConfiguration = {
     protocolVersion: PROTOCOL_VERSION,
     benchkitVersion: BENCHKIT_VERSION,
@@ -103,22 +100,31 @@ function createAgentConfiguration(
     killMs: timeouts.killMs
   }
 
-  return {
-    value,
-    encoded: Buffer.from(JSON.stringify(value)).toString('base64')
-  }
+  return Buffer.from(JSON.stringify(value)).toString('base64')
 }
 
-class Provider implements TargetProvider {
+/** Configured local or SSH target launcher. */
+export class TargetProvider {
+  /** Selected local or SSH transport mode. */
   readonly mode: TargetProviderOptions['mode']
+
+  /** Address supplied to the target process for listening. */
   readonly bindHost: string
+
+  /** Address used by the load generator. */
   readonly connectHost: string
+
   readonly #options: TargetProviderOptions
   readonly #cwd: string
   readonly #timeouts: TimeoutOptions
   readonly #diagnosticsMaxBytes: number
 
+  /** Validates and retains the configuration used for each target session. */
   constructor(options: TargetProviderOptions) {
+    if (!options || (options.mode !== 'local' && options.mode !== 'ssh')) {
+      throw new ConfigurationError('Target provider mode must be "local" or "ssh"')
+    }
+
     this.#options = options
     this.mode = options.mode
     this.#timeouts = resolveTimeouts(options.timeouts)
@@ -146,9 +152,10 @@ class Provider implements TargetProvider {
     }
   }
 
-  async start(options: TargetStartOptions): Promise<ManagedTargetSession> {
+  /** Starts a target and resolves after IPC readiness. */
+  async start(options: TargetStartOptions): Promise<TargetSession> {
     const start = validateStartOptions(options, this.mode, this.#cwd, this.bindHost, this.#timeouts.targetReadyMs)
-    const { encoded } = createAgentConfiguration(this.#diagnosticsMaxBytes, this.#timeouts)
+    const encoded = encodeAgentConfiguration(this.#diagnosticsMaxBytes, this.#timeouts)
     const child = this.#spawnAgent(encoded)
     const client = new ControlClient(child, this.#diagnosticsMaxBytes)
 
@@ -221,12 +228,4 @@ class Provider implements TargetProvider {
       stdio: ['pipe', 'pipe', 'pipe']
     })
   }
-}
-
-export function createTargetProvider(options: TargetProviderOptions): TargetProvider {
-  if (!options || (options.mode !== 'local' && options.mode !== 'ssh')) {
-    throw new ConfigurationError('Target provider mode must be "local" or "ssh"')
-  }
-
-  return new Provider(options)
 }

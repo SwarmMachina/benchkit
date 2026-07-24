@@ -1,13 +1,12 @@
-export { createBoundedLatencyRecorder, summarizeBoundedLatencySnapshot } from './bounded-latency-recorder.js'
+export { BoundedLatencyRecorder, summarizeBoundedLatencySnapshot } from './bounded-latency-recorder.js'
 export type {
-  BoundedLatencyRecorder,
   BoundedLatencyRecorderConfig,
   BoundedLatencyRecorderOptions,
   BoundedLatencySnapshot,
   BoundedLatencySummary
 } from './bounded-latency-recorder.js'
-export { default as createLatencyRecorder } from './latency-recorder.js'
-export type { LatencyRecorder, LatencySummary } from './latency-recorder.js'
+export { default as LatencyRecorder } from './latency-recorder.js'
+export type { LatencySummary } from './latency-recorder.js'
 export { default as measureBatch } from './measure-batch.js'
 export type {
   BatchLatencyDetails,

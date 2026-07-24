@@ -106,188 +106,186 @@ export interface BoundedLatencySummary {
   }
 }
 
-/** Mutable bounded latency recorder with mergeable snapshots. */
-export interface BoundedLatencyRecorder {
-  /** Records one latency observation in milliseconds. */
-  record(ms: number): void
-
-  /** Merges a snapshot created with identical histogram configuration. */
-  merge(snapshot: BoundedLatencySnapshot): void
-
-  /** Returns a detached serializable copy of the current histogram state. */
-  snapshot(): BoundedLatencySnapshot
-
-  /** Summarizes the current histogram without resetting it. */
-  summary(): BoundedLatencySummary
-
-  /** Removes all observations while retaining allocated histogram storage. */
-  reset(): void
-}
-
 const DEFAULT_LOWEST_MS = 0.001
 const DEFAULT_HIGHEST_MS = 60_000
 const DEFAULT_RELATIVE_ACCURACY = 0.01
 const MAX_BUCKETS = 1_000_000
 
-export function createBoundedLatencyRecorder(options: BoundedLatencyRecorderOptions = {}): BoundedLatencyRecorder {
-  const config = validateConfig(options)
-  const base = 1 + 2 * config.relativeAccuracy
-  const logBase = Math.log(base)
-  const bucketCount = Math.ceil(Math.log(config.highestTrackableMs / config.lowestDiscernibleMs) / logBase) + 1
+/** Mutable bounded latency histogram with mergeable snapshots. */
+export class BoundedLatencyRecorder {
+  readonly #config: BoundedLatencyRecorderConfig
+  readonly #base: number
+  readonly #logBase: number
+  readonly #counts: Float64Array
+  #zeroCount = 0
+  #count = 0
+  #nonFinite = 0
+  #belowRange = 0
+  #aboveRange = 0
 
-  if (bucketCount > MAX_BUCKETS) {
-    throw new RangeError(`latency recorder configuration requires ${bucketCount} buckets; maximum is ${MAX_BUCKETS}`)
+  /** Allocates histogram storage for the validated recorder configuration. */
+  constructor(options: BoundedLatencyRecorderOptions = {}) {
+    this.#config = validateConfig(options)
+    this.#base = 1 + 2 * this.#config.relativeAccuracy
+    this.#logBase = Math.log(this.#base)
+
+    const bucketCount =
+      Math.ceil(Math.log(this.#config.highestTrackableMs / this.#config.lowestDiscernibleMs) / this.#logBase) + 1
+
+    if (bucketCount > MAX_BUCKETS) {
+      throw new RangeError(`latency recorder configuration requires ${bucketCount} buckets; maximum is ${MAX_BUCKETS}`)
+    }
+
+    this.#counts = new Float64Array(bucketCount)
   }
 
-  const counts = new Float64Array(bucketCount)
-
-  let zeroCount = 0
-  let count = 0
-  let nonFinite = 0
-  let belowRange = 0
-  let aboveRange = 0
-
-  function record(ms: number): void {
+  /** Records one latency observation in milliseconds. */
+  record(ms: number): void {
     if (!Number.isFinite(ms)) {
-      nonFinite++
+      this.#nonFinite++
 
       return
     }
 
     if (ms === 0) {
-      zeroCount++
-      count++
+      this.#zeroCount++
+      this.#count++
 
       return
     }
 
-    if (ms < config.lowestDiscernibleMs) {
-      belowRange++
+    if (ms < this.#config.lowestDiscernibleMs) {
+      this.#belowRange++
 
       return
     }
 
-    if (ms > config.highestTrackableMs) {
-      aboveRange++
+    if (ms > this.#config.highestTrackableMs) {
+      this.#aboveRange++
 
       return
     }
 
-    const index = Math.min(counts.length - 1, Math.floor(Math.log(ms / config.lowestDiscernibleMs) / logBase))
+    const index = Math.min(
+      this.#counts.length - 1,
+      Math.floor(Math.log(ms / this.#config.lowestDiscernibleMs) / this.#logBase)
+    )
 
-    counts[index] = (counts[index] ?? 0) + 1
-    count++
+    this.#counts[index] = (this.#counts[index] ?? 0) + 1
+    this.#count++
   }
 
-  function merge(value: BoundedLatencySnapshot): void {
-    validateSnapshot(value, config, counts.length)
+  /** Merges a snapshot created with identical histogram configuration. */
+  merge(value: BoundedLatencySnapshot): void {
+    validateSnapshot(value, this.#config, this.#counts.length)
 
-    for (let index = 0; index < counts.length; index++) {
-      counts[index] = (counts[index] ?? 0) + (value.counts[index] ?? 0)
+    for (let index = 0; index < this.#counts.length; index++) {
+      this.#counts[index] = (this.#counts[index] ?? 0) + (value.counts[index] ?? 0)
     }
 
-    zeroCount += value.zeroCount
-    count += value.count
-    nonFinite += value.nonFinite
-    belowRange += value.belowRange
-    aboveRange += value.aboveRange
+    this.#zeroCount += value.zeroCount
+    this.#count += value.count
+    this.#nonFinite += value.nonFinite
+    this.#belowRange += value.belowRange
+    this.#aboveRange += value.aboveRange
   }
 
-  function snapshot(): BoundedLatencySnapshot {
+  /** Returns a detached serializable copy of the current histogram state. */
+  snapshot(): BoundedLatencySnapshot {
     return {
       version: 1,
-      ...config,
-      counts: Array.from(counts),
-      zeroCount,
-      count,
-      nonFinite,
-      belowRange,
-      aboveRange
+      ...this.#config,
+      counts: Array.from(this.#counts),
+      zeroCount: this.#zeroCount,
+      count: this.#count,
+      nonFinite: this.#nonFinite,
+      belowRange: this.#belowRange,
+      aboveRange: this.#aboveRange
     }
   }
 
-  function quantile(fraction: number): number | null {
-    if (!count) {
+  /** Summarizes the current histogram without resetting it. */
+  summary(): BoundedLatencySummary {
+    return {
+      count: this.#count,
+      dropped: this.#nonFinite + this.#belowRange + this.#aboveRange,
+      outOfRange: this.#belowRange + this.#aboveRange,
+      nonFinite: this.#nonFinite,
+      belowRange: this.#belowRange,
+      aboveRange: this.#aboveRange,
+      averageMs: this.#average(),
+      p50Ms: this.#quantile(0.5),
+      p95Ms: this.#quantile(0.95),
+      p97_5Ms: this.#quantile(0.975),
+      p99Ms: this.#quantile(0.99),
+      accuracy: {
+        algorithm: 'logarithmic-histogram-nearest-rank',
+        maxRelativeErrorPct: this.#config.relativeAccuracy * 100,
+        lowestDiscernibleMs: this.#config.lowestDiscernibleMs,
+        highestTrackableMs: this.#config.highestTrackableMs
+      }
+    }
+  }
+
+  /** Removes all observations while retaining allocated histogram storage. */
+  reset(): void {
+    this.#counts.fill(0)
+    this.#zeroCount = 0
+    this.#count = 0
+    this.#nonFinite = 0
+    this.#belowRange = 0
+    this.#aboveRange = 0
+  }
+
+  #quantile(fraction: number): number | null {
+    if (!this.#count) {
       return null
     }
 
-    const rank = Math.max(1, Math.ceil(count * fraction))
+    const rank = Math.max(1, Math.ceil(this.#count * fraction))
 
-    if (rank <= zeroCount) {
+    if (rank <= this.#zeroCount) {
       return 0
     }
 
-    let cumulative = zeroCount
+    let cumulative = this.#zeroCount
 
-    for (let index = 0; index < counts.length; index++) {
-      cumulative += counts[index] ?? 0
+    for (let index = 0; index < this.#counts.length; index++) {
+      cumulative += this.#counts[index] ?? 0
 
       if (cumulative >= rank) {
-        const lower = config.lowestDiscernibleMs * base ** index
-        const midpoint = lower * (1 + config.relativeAccuracy)
+        const lower = this.#config.lowestDiscernibleMs * this.#base ** index
+        const midpoint = lower * (1 + this.#config.relativeAccuracy)
 
-        return Math.min(config.highestTrackableMs, midpoint)
+        return Math.min(this.#config.highestTrackableMs, midpoint)
       }
     }
 
-    return config.highestTrackableMs
+    return this.#config.highestTrackableMs
   }
 
-  function average(): number | null {
-    if (!count) {
+  #average(): number | null {
+    if (!this.#count) {
       return null
     }
 
     let totalMs = 0
 
-    for (let index = 0; index < counts.length; index++) {
-      const bucketCount = counts[index] ?? 0
+    for (let index = 0; index < this.#counts.length; index++) {
+      const bucketCount = this.#counts[index] ?? 0
 
       if (bucketCount === 0) {
         continue
       }
 
-      const lower = config.lowestDiscernibleMs * base ** index
-      const midpoint = Math.min(config.highestTrackableMs, lower * (1 + config.relativeAccuracy))
+      const lower = this.#config.lowestDiscernibleMs * this.#base ** index
+      const midpoint = Math.min(this.#config.highestTrackableMs, lower * (1 + this.#config.relativeAccuracy))
 
       totalMs += midpoint * bucketCount
     }
 
-    return totalMs / count
+    return totalMs / this.#count
   }
-
-  function summary(): BoundedLatencySummary {
-    return {
-      count,
-      dropped: nonFinite + belowRange + aboveRange,
-      outOfRange: belowRange + aboveRange,
-      nonFinite,
-      belowRange,
-      aboveRange,
-      averageMs: average(),
-      p50Ms: quantile(0.5),
-      p95Ms: quantile(0.95),
-      p97_5Ms: quantile(0.975),
-      p99Ms: quantile(0.99),
-      accuracy: {
-        algorithm: 'logarithmic-histogram-nearest-rank',
-        maxRelativeErrorPct: config.relativeAccuracy * 100,
-        lowestDiscernibleMs: config.lowestDiscernibleMs,
-        highestTrackableMs: config.highestTrackableMs
-      }
-    }
-  }
-
-  function reset(): void {
-    counts.fill(0)
-    zeroCount = 0
-    count = 0
-    nonFinite = 0
-    belowRange = 0
-    aboveRange = 0
-  }
-
-  return { record, merge, snapshot, summary, reset }
 }
 
 export function summarizeBoundedLatencySnapshot(snapshot: BoundedLatencySnapshot): BoundedLatencySummary {
@@ -295,7 +293,7 @@ export function summarizeBoundedLatencySnapshot(snapshot: BoundedLatencySnapshot
     throw new TypeError('snapshot must be a bounded latency snapshot')
   }
 
-  const recorder = createBoundedLatencyRecorder({
+  const recorder = new BoundedLatencyRecorder({
     lowestDiscernibleMs: snapshot.lowestDiscernibleMs,
     highestTrackableMs: snapshot.highestTrackableMs,
     relativeAccuracy: snapshot.relativeAccuracy

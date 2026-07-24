@@ -9,7 +9,7 @@ import {
   type Http1LoadTransportMetrics
 } from '@swarmmachina/benchkit/load/http1'
 import {
-  createBoundedLatencyRecorder,
+  BoundedLatencyRecorder,
   forceGc,
   measureBatch,
   measureMemoryGrowth,
@@ -31,8 +31,8 @@ import { renderBatchMeasurementsMarkdown } from '@swarmmachina/benchkit/reportin
 import { finiteMedian, pairedComparison, quantileLinear, tukeyHinges } from '@swarmmachina/benchkit/statistics'
 import timed from '@swarmmachina/benchkit/timed'
 import { bytesToMiB } from '@swarmmachina/benchkit/units'
-import { createTargetRuntime } from '@swarmmachina/benchkit/target'
-import { BENCHKIT_VERSION, PROTOCOL_VERSION, createTargetProvider, type TargetSession } from '@swarmmachina/benchkit'
+import { TargetRuntime } from '@swarmmachina/benchkit/target'
+import { BENCHKIT_VERSION, PROTOCOL_VERSION, TargetProvider, type TargetSession } from '@swarmmachina/benchkit'
 
 const result: BenchmarkResult = {
   runs: [{ run: 1, rows: [{ fw: 'core' }] }]
@@ -43,8 +43,8 @@ const params: MetricGuardParams = {
   baselineTests: {}
 }
 const guard: MetricGuardResult = metricGuardDefault(params)
-const provider = createTargetProvider({ mode: 'local' })
-const runtime = createTargetRuntime()
+const provider = new TargetProvider({ mode: 'local' })
+const runtime = new TargetRuntime()
 const session = undefined as TargetSession | undefined
 const portOptions: GetFreePortOptions = { host: '127.0.0.1' }
 const httpResult = undefined as Http1LoadResult | undefined
@@ -76,7 +76,7 @@ void [
   runtime,
   session,
   balancedSchedule({ runs: 2 }),
-  createBoundedLatencyRecorder(),
+  new BoundedLatencyRecorder(),
   createBenchmarkArtifact({ suite: 'types', parameters: {}, results: [] }),
   forceGc,
   measureMemoryGrowth,

@@ -15,19 +15,6 @@ export interface LatencySummary {
   p99Ms: number | null
 }
 
-/**
- * Legacy latency recorder that retains at most the latest 100,000 samples.
- *
- * Prefer `BoundedLatencyRecorder` when snapshots must be merged across workers.
- */
-export interface LatencyRecorder {
-  /** Records one latency observation in milliseconds. */
-  record(ms: number): void
-
-  /** Returns latency statistics using `messages` as the average denominator. */
-  summary(messages: number): LatencySummary
-}
-
 function percentileFromBuffer(buffer: Float64Array, sampleCount: number, percentile: number): number | null {
   if (!sampleCount) {
     return null
@@ -41,30 +28,35 @@ function percentileFromBuffer(buffer: Float64Array, sampleCount: number, percent
 
 // Running sum drives the average; the bounded ring buffer (last MAX_LAT_SAMPLES)
 // drives the percentiles.
-export default function createLatencyRecorder(): LatencyRecorder {
-  const lat = new Float64Array(MAX_LAT_SAMPLES)
+/**
+ * Legacy latency recorder that retains at most the latest 100,000 samples.
+ *
+ * Prefer `BoundedLatencyRecorder` when snapshots must be merged across workers.
+ */
+export default class LatencyRecorder {
+  readonly #latencies = new Float64Array(MAX_LAT_SAMPLES)
+  #sum = 0
+  #count = 0
+  #index = 0
 
-  let sum = 0
-  let count = 0
-  let idx = 0
+  /** Records one latency observation in milliseconds. */
+  record(ms: number): void {
+    this.#sum += ms
+    this.#latencies[this.#index] = ms
+    this.#index = (this.#index + 1) % MAX_LAT_SAMPLES
 
-  return {
-    record(ms) {
-      sum += ms
-      lat[idx] = ms
-      idx = (idx + 1) % MAX_LAT_SAMPLES
+    if (this.#count < MAX_LAT_SAMPLES) {
+      this.#count++
+    }
+  }
 
-      if (count < MAX_LAT_SAMPLES) {
-        count++
-      }
-    },
-    summary(messages) {
-      return {
-        avgMs: messages ? sum / messages : null,
-        p95Ms: percentileFromBuffer(lat, count, 95),
-        p97_5Ms: percentileFromBuffer(lat, count, 97.5),
-        p99Ms: percentileFromBuffer(lat, count, 99)
-      }
+  /** Returns latency statistics using `messages` as the average denominator. */
+  summary(messages: number): LatencySummary {
+    return {
+      avgMs: messages ? this.#sum / messages : null,
+      p95Ms: percentileFromBuffer(this.#latencies, this.#count, 95),
+      p97_5Ms: percentileFromBuffer(this.#latencies, this.#count, 97.5),
+      p99Ms: percentileFromBuffer(this.#latencies, this.#count, 99)
     }
   }
 }

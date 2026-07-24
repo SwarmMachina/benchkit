@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { createBoundedLatencyRecorder, measureBatch, measureScenario } from '@swarmmachina/benchkit'
+import { BoundedLatencyRecorder, measureBatch, measureScenario } from '@swarmmachina/benchkit'
 
 test('measureBatch records runtime deltas and nearest-rank latency', async () => {
   let prepared = false
@@ -37,7 +37,7 @@ test('measureBatch validates operation count', async () => {
 })
 
 test('measureBatch consumes a bounded latency snapshot without retaining raw samples', async () => {
-  const recorder = createBoundedLatencyRecorder({ lowestDiscernibleMs: 0.0001 })
+  const recorder = new BoundedLatencyRecorder({ lowestDiscernibleMs: 0.0001 })
 
   for (const sample of [0.001, 0.01, 0.1, 1, 10]) {
     recorder.record(sample)

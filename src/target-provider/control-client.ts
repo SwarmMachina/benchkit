@@ -12,6 +12,7 @@ import { NdjsonDecoder, encodeNdjson } from '../control/ndjson.js'
 import { parseResponse, type ControlEvent, type ControlResponse, type RequestType } from '../control/protocol.js'
 import { isRecord } from '../control/value-guards.js'
 import { BENCHKIT_VERSION, PROTOCOL_VERSION } from '../control/version.js'
+import { terminateChildProcess, waitForChildExit } from '../orchestration/managed-child-process.js'
 
 interface PendingRequest {
   type: RequestType
@@ -162,15 +163,14 @@ export class ControlClient {
       return
     }
 
-    const exited = await Promise.race([
-      once(this.#child, 'exit').then(() => true),
-      new Promise<false>((resolve) => setTimeout(() => resolve(false), timeoutMs))
-    ])
-
-    if (!exited) {
-      this.#child.kill('SIGTERM')
-      await Promise.race([once(this.#child, 'exit'), new Promise<void>((resolve) => setTimeout(resolve, timeoutMs))])
+    if (await waitForChildExit(this.#child, timeoutMs)) {
+      return
     }
+
+    await terminateChildProcess(this.#child, {
+      graceMs: timeoutMs,
+      killMs: timeoutMs
+    })
   }
 
   #onMessage(message: ControlResponse | ControlEvent): void {

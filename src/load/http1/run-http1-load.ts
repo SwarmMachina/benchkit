@@ -1,10 +1,9 @@
 import os from 'node:os'
-import { performance } from 'node:perf_hooks'
-import { Worker } from 'node:worker_threads'
-import { createBoundedLatencyRecorder } from '../../measurement/bounded-latency-recorder.js'
-import { ProcessMemorySampler, type ProcessMemorySummary } from '../../measurement/process-memory.js'
+import { BoundedLatencyRecorder } from '../../measurement/bounded-latency-recorder.js'
+import { Http1LoadCoordinator } from './http1-load-coordinator.js'
+import type { Http1LoadPhaseResult, NormalizedHttp1LoadOptions } from './http1-load-context.js'
 import { buildHttp1Request } from './request.js'
-import type { Http1WorkerCommand, Http1WorkerData, Http1WorkerMessage, Http1WorkerResult } from './worker-protocol.js'
+import type { Http1WorkerResult } from './worker-protocol.js'
 import type { Http1LoadErrorMetrics, Http1LoadParameters, Http1LoadResult, RunHttp1LoadOptions } from './types.js'
 
 const DEFAULT_CONNECTIONS = 10
@@ -15,30 +14,6 @@ const DEFAULT_STARTUP_TIMEOUT_MS = 10_000
 const DEFAULT_MEMORY_SAMPLE_MS = 50
 const DEFAULT_MAX_HEADER_BYTES = 64 * 1024
 const SATURATED_ELU_PCT = 95
-
-interface NormalizedHttp1LoadOptions {
-  parameters: Http1LoadParameters
-  request: Buffer
-  protocol: 'http:' | 'https:'
-  hostname: string
-  port: number
-  socketPath?: string
-  tls?: RunHttp1LoadOptions['tls']
-  startupTimeoutMs: number
-  memorySampleMs: number
-  maxHeaderBytes: number
-  signal?: AbortSignal
-}
-
-interface PhaseResult {
-  startedAt: Date
-  finishedAt: Date
-  durationMs: number
-  workers: Http1WorkerResult[]
-  cpuMs: number
-  parentEluPct: number
-  processMemory: ProcessMemorySummary
-}
 
 /**
  * Runs an HTTP/1.1 load scenario and resolves with bounded measurements.
@@ -73,10 +48,7 @@ interface PhaseResult {
  */
 export default async function runHttp1Load(options: RunHttp1LoadOptions): Promise<Http1LoadResult> {
   const normalized = normalizeOptions(options)
-
-  throwIfAborted(normalized.signal)
-
-  const phase = await runLifecycle(normalized)
+  const phase = await new Http1LoadCoordinator(normalized).run()
 
   return aggregateResult(normalized.parameters, phase)
 }
@@ -179,143 +151,8 @@ function normalizeOptions(options: RunHttp1LoadOptions): NormalizedHttp1LoadOpti
   }
 }
 
-async function runLifecycle(options: NormalizedHttp1LoadOptions): Promise<PhaseResult> {
-  throwIfAborted(options.signal)
-
-  const workers = createWorkers(options)
-  const memory = new ProcessMemorySampler()
-
-  let memoryStarted = false
-
-  try {
-    await Promise.all(
-      workers.map((worker) =>
-        waitForWorkerMessage(worker, 'ready', options.startupTimeoutMs, options.signal, 'HTTP/1 worker startup')
-      )
-    )
-
-    if (options.parameters.warmupMs > 0) {
-      const warmupResults = workers.map((worker) =>
-        waitForWorkerMessage(
-          worker,
-          'warmup-complete',
-          options.parameters.warmupMs + options.parameters.timeoutMs + 5_000,
-          options.signal,
-          'HTTP/1 warmup'
-        )
-      )
-
-      for (const worker of workers) {
-        const command: Http1WorkerCommand = {
-          type: 'start',
-          phase: 'warmup',
-          durationMs: options.parameters.warmupMs
-        }
-
-        worker.postMessage(command)
-      }
-
-      await Promise.all(warmupResults)
-    }
-
-    const results = workers.map((worker) =>
-      waitForWorkerMessage(
-        worker,
-        'result',
-        options.parameters.durationMs + options.parameters.timeoutMs + 5_000,
-        options.signal,
-        'HTTP/1 measurement'
-      )
-    )
-    const startedAt = new Date()
-    const eluBefore = performance.eventLoopUtilization()
-    const cpuBefore = process.cpuUsage()
-
-    memory.start({ sampleMs: options.memorySampleMs })
-    memoryStarted = true
-
-    for (const worker of workers) {
-      const command: Http1WorkerCommand = {
-        type: 'start',
-        phase: 'measurement',
-        durationMs: options.parameters.durationMs
-      }
-
-      worker.postMessage(command)
-    }
-
-    const messages = await Promise.all(results)
-    const finishedAt = new Date()
-    const elu = performance.eventLoopUtilization(eluBefore)
-    const cpu = process.cpuUsage(cpuBefore)
-    const processMemory = memory.stop()
-
-    memoryStarted = false
-
-    if (!processMemory) {
-      throw new Error('HTTP/1 load process memory sampler did not produce a result')
-    }
-
-    const workerResults = messages.map((message) => {
-      if (message.type !== 'result') {
-        throw new Error('HTTP/1 worker returned an unexpected message')
-      }
-
-      return message.result
-    })
-
-    return {
-      startedAt,
-      finishedAt,
-      durationMs: Math.max(...workerResults.map((result) => result.durationMs)),
-      workers: workerResults,
-      cpuMs: (cpu.user + cpu.system) / 1000,
-      parentEluPct: elu.utilization * 100,
-      processMemory
-    }
-  } finally {
-    if (memoryStarted) {
-      memory.stop()
-    }
-
-    await Promise.allSettled(workers.map((worker) => worker.terminate()))
-  }
-}
-
-function createWorkers(options: NormalizedHttp1LoadOptions): Worker[] {
-  const workers: Worker[] = []
-  const baseConnections = Math.floor(options.parameters.connections / options.parameters.workers)
-  const extraConnections = options.parameters.connections % options.parameters.workers
-
-  for (let index = 0; index < options.parameters.workers; index++) {
-    const workerConnections = baseConnections + (index < extraConnections ? 1 : 0)
-    const data: Http1WorkerData = {
-      request: options.request,
-      protocol: options.protocol,
-      hostname: options.hostname,
-      port: options.port,
-      method: options.parameters.method,
-      connections: workerConnections,
-      pipelining: options.parameters.pipelining,
-      rateSequenceOffset: index,
-      rateSequenceStride: options.parameters.workers,
-      correctCoordinatedOmission: options.parameters.correctCoordinatedOmission,
-      timeoutMs: options.parameters.timeoutMs,
-      memorySampleMs: options.memorySampleMs,
-      maxHeaderBytes: options.maxHeaderBytes,
-      ...(options.parameters.rate === null ? {} : { ratePerSecond: options.parameters.rate }),
-      ...(options.socketPath === undefined ? {} : { socketPath: options.socketPath }),
-      ...(options.tls === undefined ? {} : { tls: options.tls })
-    }
-
-    workers.push(new Worker(new URL('./worker.js', import.meta.url), { workerData: data }))
-  }
-
-  return workers
-}
-
-function aggregateResult(parameters: Http1LoadParameters, phase: PhaseResult): Http1LoadResult {
-  const latency = createBoundedLatencyRecorder()
+function aggregateResult(parameters: Http1LoadParameters, phase: Http1LoadPhaseResult): Http1LoadResult {
+  const latency = new BoundedLatencyRecorder()
   const statusCodes: Record<string, number> = {}
   const errors: Http1LoadErrorMetrics = {
     connection: 0,
@@ -413,58 +250,6 @@ function aggregateResult(parameters: Http1LoadParameters, phase: PhaseResult): H
   }
 }
 
-function waitForWorkerMessage<Type extends Http1WorkerMessage['type']>(
-  worker: Worker,
-  expectedType: Type,
-  timeoutMs: number,
-  signal: AbortSignal | undefined,
-  phase: string
-): Promise<Extract<Http1WorkerMessage, { type: Type }>> {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      cleanup()
-      reject(new Error(`${phase} timed out after ${timeoutMs} ms`))
-    }, timeoutMs)
-    const onMessage = (message: Http1WorkerMessage): void => {
-      if (message.type === 'fatal') {
-        cleanup()
-        reject(new Error(`HTTP/1 worker failed: ${message.error}`))
-
-        return
-      }
-
-      if (message.type === expectedType) {
-        cleanup()
-        resolve(message as Extract<Http1WorkerMessage, { type: Type }>)
-      }
-    }
-    const onError = (error: Error): void => {
-      cleanup()
-      reject(error)
-    }
-    const onExit = (code: number): void => {
-      cleanup()
-      reject(new Error(`HTTP/1 worker exited before ${expectedType} with code ${code}`))
-    }
-    const onAbort = (): void => {
-      cleanup()
-      reject(abortError())
-    }
-    const cleanup = (): void => {
-      clearTimeout(timeout)
-      worker.off('message', onMessage)
-      worker.off('error', onError)
-      worker.off('exit', onExit)
-      signal?.removeEventListener('abort', onAbort)
-    }
-
-    worker.on('message', onMessage)
-    worker.once('error', onError)
-    worker.once('exit', onExit)
-    signal?.addEventListener('abort', onAbort, { once: true })
-  })
-}
-
 function sumWorkerMetric(
   workers: readonly Http1WorkerResult[],
   key: 'heapUsedPeakBytes' | 'externalPeakBytes' | 'arrayBuffersPeakBytes'
@@ -544,18 +329,4 @@ function validateTlsOptions(options: RunHttp1LoadOptions['tls']): void {
   if (options.servername !== undefined && (typeof options.servername !== 'string' || options.servername === '')) {
     throw new TypeError('tls.servername must be a non-empty string')
   }
-}
-
-function throwIfAborted(signal: AbortSignal | undefined): void {
-  if (signal?.aborted) {
-    throw abortError()
-  }
-}
-
-function abortError(): Error {
-  const error = new Error('HTTP/1 load was aborted')
-
-  error.name = 'AbortError'
-
-  return error
 }
