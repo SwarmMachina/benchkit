@@ -35,6 +35,7 @@ test('new benchmark primitives are available through explicit package exports', 
     ['@swarmmachina/benchkit/bounded-latency-recorder', ['createBoundedLatencyRecorder']],
     ['@swarmmachina/benchkit/delay', ['default']],
     ['@swarmmachina/benchkit/get-free-port', ['default', 'getFreePort']],
+    ['@swarmmachina/benchkit/load/http1', ['runHttp1Load']],
     [
       '@swarmmachina/benchkit/managed-child-process',
       ['terminateChildProcess', 'terminateWindowsProcessTree', 'waitForChildExit']

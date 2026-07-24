@@ -27,6 +27,7 @@ export interface BoundedLatencySummary {
   nonFinite: number
   belowRange: number
   aboveRange: number
+  averageMs: number | null
   p50Ms: number | null
   p95Ms: number | null
   p97_5Ms: number | null
@@ -156,6 +157,29 @@ export function createBoundedLatencyRecorder(options: BoundedLatencyRecorderOpti
     return config.highestTrackableMs
   }
 
+  function average(): number | null {
+    if (!count) {
+      return null
+    }
+
+    let totalMs = 0
+
+    for (let index = 0; index < counts.length; index++) {
+      const bucketCount = counts[index] ?? 0
+
+      if (bucketCount === 0) {
+        continue
+      }
+
+      const lower = config.lowestDiscernibleMs * base ** index
+      const midpoint = Math.min(config.highestTrackableMs, lower * (1 + config.relativeAccuracy))
+
+      totalMs += midpoint * bucketCount
+    }
+
+    return totalMs / count
+  }
+
   function summary(): BoundedLatencySummary {
     return {
       count,
@@ -164,6 +188,7 @@ export function createBoundedLatencyRecorder(options: BoundedLatencyRecorderOpti
       nonFinite,
       belowRange,
       aboveRange,
+      averageMs: average(),
       p50Ms: quantile(0.5),
       p95Ms: quantile(0.95),
       p97_5Ms: quantile(0.975),

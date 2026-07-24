@@ -2,6 +2,7 @@ import delayDefault from '@swarmmachina/benchkit/delay'
 import getFreePortDefault, { type GetFreePortOptions } from '@swarmmachina/benchkit/get-free-port'
 import MetricsDefault from '@swarmmachina/benchkit/metrics'
 import metricGuardDefault, { type MetricGuardParams, type MetricGuardResult } from '@swarmmachina/benchkit/metric-guard'
+import { runHttp1Load, type Http1LoadResult } from '@swarmmachina/benchkit/load/http1'
 import {
   createBoundedLatencyRecorder,
   forceGc,
@@ -41,6 +42,7 @@ const provider = createTargetProvider({ mode: 'local' })
 const runtime = createTargetRuntime()
 const session = undefined as TargetSession | undefined
 const portOptions: GetFreePortOptions = { host: '127.0.0.1' }
+const httpResult = undefined as Http1LoadResult | undefined
 
 void [
   Metrics,
@@ -52,6 +54,7 @@ void [
   getFreePort,
   getFreePortDefault,
   guard,
+  httpResult,
   measureBatch,
   quantileLinear,
   renderRegressionMarkdown,
@@ -77,6 +80,7 @@ void [
   ]),
   sampleV8HeapAllocations,
   renderBatchMeasurementsMarkdown,
+  runHttp1Load,
   terminateChildProcess,
   waitForChildExit,
   tukeyHinges([1, 2])

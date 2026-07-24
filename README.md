@@ -1,8 +1,8 @@
 # @swarmmachina/benchkit
 
 Zero-runtime-dependency benchmark, profiling and regression helpers for
-SwarmMachina projects. The package provides typed building blocks without
-coupling benchmark suites to a transport, framework or load generator.
+SwarmMachina projects. The package provides transport-neutral building blocks
+plus an opt-in HTTP/1 load driver.
 
 ## Includes
 
@@ -13,6 +13,7 @@ coupling benchmark suites to a transport, framework or load generator.
 - V8 CPU profile processing
 - Child-process orchestration and GitHub step-summary reporting
 - Local and SSH target lifecycle through a short-lived stdio agent
+- Closed-loop HTTP/1.1 load generation through an isolated package subpath
 - ESM JavaScript, TypeScript declarations and source maps
 
 ## Runtime
@@ -77,6 +78,7 @@ exports. The physical `dist/` layout is not part of the public contract.
 | ----------------- | --------------------------------------------------------------- |
 | `measurement`     | Runtime metrics, latency recording, batch measurement and time  |
 | `control`         | Versioned protocol, state machine, errors and environment data  |
+| `load/http1`      | Closed-loop HTTP/1.1 load generation and generator health       |
 | `orchestration`   | CLI parsing, directories, child processes and run ordering      |
 | `profiling`       | V8 log processing, parsing and CPU profile artifact collection  |
 | `regression`      | Baseline validation, guards and Markdown regression reports     |
@@ -87,8 +89,43 @@ exports. The physical `dist/` layout is not part of the public contract.
 | `target-provider` | Local/SSH providers and `TargetSession`                         |
 | `units`           | Unit conversions shared by measurement and reporting code       |
 
-Every domain export is also available as a named export from
-`@swarmmachina/benchkit`.
+Transport-neutral domain exports are also available from
+`@swarmmachina/benchkit`. The HTTP/1 driver remains subpath-only so importing
+the package root never initializes load-generator code.
+
+## HTTP/1 load generation
+
+`runHttp1Load()` drives a fixed number of HTTP/1.1 keep-alive connections from
+worker threads. It supports pipelining, discarded warmup, fixed and chunked
+responses, bounded latency histograms, status/error counters and generator-side
+ELU and memory.
+
+```ts
+import { runHttp1Load } from '@swarmmachina/benchkit/load/http1'
+
+const result = await runHttp1Load({
+  name: 'base-sync',
+  url: 'http://127.0.0.1:3000/base-sync',
+  connections: 100,
+  pipelining: 10,
+  workers: 4,
+  warmupMs: 2_000,
+  durationMs: 10_000
+})
+
+console.log(
+  result.requests.averagePerSecond,
+  result.latencyMs.averageMs,
+  result.latencyMs.p95Ms,
+  result.latencyMs.p99Ms,
+  result.loadGenerator.maxWorkerEluPct
+)
+```
+
+The driver is closed-loop: each completed response releases one replacement
+request on the same connection. See [HTTP/1 load generator](docs/http1-load.md)
+for framing support, measurement semantics, limitations and the local capacity
+smoke command.
 
 ## Statistics
 

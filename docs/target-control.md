@@ -11,8 +11,9 @@
   to stderr.
 - `createTargetRuntime()` is the only target-side integration. It handles Node IPC
   lifecycle and metrics messages but does not participate in the server hot path.
-- The consuming benchmark owns load generation, protocol URLs, scenarios, result
-  aggregation, regression policy, and report formatting.
+- The consuming benchmark selects load generation, protocol URLs, scenarios,
+  result aggregation, regression policy, and report formatting. Benchkit's
+  optional HTTP/1 driver is runner-side and does not participate in control.
 
 The runner-to-agent write path is request/response NDJSON. The agent-to-target
 write path is Node IPC. Load traffic does not pass through either control path:

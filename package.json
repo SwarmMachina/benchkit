@@ -33,6 +33,11 @@
       "import": "./dist/measurement/index.js",
       "default": "./dist/measurement/index.js"
     },
+    "./load/http1": {
+      "types": "./dist/load/http1/index.d.ts",
+      "import": "./dist/load/http1/index.js",
+      "default": "./dist/load/http1/index.js"
+    },
     "./control": {
       "types": "./dist/control/index.d.ts",
       "import": "./dist/control/index.js",
@@ -284,6 +289,7 @@
     "preset": "typescript"
   },
   "scripts": {
+    "bench:http1-load": "pnpm build && node scripts/benchmark-http1-load.js",
     "build": "node scripts/clean-dist.js && tsc",
     "check": "swm-standards check && tsc --noEmit",
     "check:types": "tsc --noEmit",

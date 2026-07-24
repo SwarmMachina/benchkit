@@ -27,6 +27,8 @@ test('bounded recorder approximates nearest-rank percentiles on a realistic dist
   assert.equal(summary.count, samples.length)
   assert.equal(summary.dropped, 0)
   assert.equal(summary.accuracy.maxRelativeErrorPct, 0.5)
+  assert.ok(summary.averageMs !== null)
+  assert.ok(Math.abs(summary.averageMs - samples.reduce((total, value) => total + value, 0) / samples.length) < 0.01)
   assertApproximateNearestRank(summary, samples, 0.005)
 })
 
@@ -82,6 +84,7 @@ test('bounded recorder reports invalid and out-of-range samples', () => {
       nonFinite: 1,
       belowRange: 2,
       aboveRange: 1,
+      averageMs: summary.averageMs,
       p50Ms: 0.101,
       p95Ms: null,
       p97_5Ms: null,
