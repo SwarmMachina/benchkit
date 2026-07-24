@@ -76,14 +76,14 @@ async function runWorker(data: Http1WorkerData): Promise<void> {
     connected = Math.max(0, connected - 1)
   }
 
-  function onResponse(connection: Http1Connection, statusCode: number): void {
+  function onResponse(connection: Http1Connection, statusCode: number): boolean {
     const sentAt = connection.timestamps.shift()
 
     if (sentAt === null) {
       errors.protocol++
       connection.reconnectAfterProtocolError()
 
-      return
+      return false
     }
 
     const now = performance.now()
@@ -97,9 +97,7 @@ async function runWorker(data: Http1WorkerData): Promise<void> {
 
     latency.record(now - sentAt)
 
-    if (running && now < stopAt) {
-      connection.send(1)
-    }
+    return running && now < stopAt
   }
 
   function start(): void {
@@ -205,7 +203,20 @@ async function runWorker(data: Http1WorkerData): Promise<void> {
         bytesRead += chunk.length
 
         try {
-          this.#parser.push(chunk, (statusCode) => onResponse(this, statusCode))
+          // Refill once per received TCP chunk. Writing once per completed
+          // response turns the load generator into a syscall bottleneck at
+          // high pipeline depths without changing the outstanding request cap.
+          let replenish = 0
+
+          this.#parser.push(chunk, (statusCode) => {
+            if (onResponse(this, statusCode)) {
+              replenish++
+            }
+          })
+
+          if (replenish > 0) {
+            this.send(replenish)
+          }
         } catch {
           errors.protocol++
           this.#protocolFailure = true
