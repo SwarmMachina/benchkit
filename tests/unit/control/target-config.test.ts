@@ -6,7 +6,7 @@ import {
   UnsupportedFeatureError,
   VersionMismatchError
 } from '@swarmmachina/benchkit'
-import { decodeAgentConfiguration } from '../../dist/agent/config.js'
+import { decodeAgentConfiguration } from '../../../dist/agent/config.js'
 import { BENCHKIT_VERSION, PROTOCOL_VERSION } from '@swarmmachina/benchkit/control'
 
 function encode(value: unknown): string {

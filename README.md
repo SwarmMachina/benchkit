@@ -243,6 +243,8 @@ Useful focused commands:
 ```bash
 pnpm run check
 pnpm run test
+pnpm run test:unit
+pnpm run test:integration
 pnpm run test:packed-types
 pnpm run bench:http1-load
 ```

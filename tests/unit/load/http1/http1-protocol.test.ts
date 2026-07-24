@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildHttp1Request } from '../../dist/load/http1/request.js'
-import { Http1ResponseParser } from '../../dist/load/http1/response-parser.js'
+import { buildHttp1Request } from '../../../../dist/load/http1/request.js'
+import { Http1ResponseParser } from '../../../../dist/load/http1/response-parser.js'
 
 test('HTTP/1 request builder emits exact framing and an IPv6 Host header', () => {
   const request = buildHttp1Request({

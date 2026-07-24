@@ -76,7 +76,7 @@ jobs:
       - name: Check
         run: pnpm check
 
-      - name: Unit tests
+      - name: Tests
         run: pnpm test
 
       - name: Build

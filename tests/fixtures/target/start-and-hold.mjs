@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
-import { createTargetProvider } from '../../dist/index.js'
+import { createTargetProvider } from '../../../dist/index.js'
 
-const cwd = new URL('../../', import.meta.url)
+const cwd = new URL('../../../', import.meta.url)
 const pidFile = process.argv[2]
 const provider = createTargetProvider({
   mode: 'local',
@@ -13,7 +13,7 @@ const provider = createTargetProvider({
   }
 })
 const session = await provider.start({
-  entrypoint: './tests/fixtures/target.mjs',
+  entrypoint: './tests/fixtures/target/target.mjs',
   args: ['--log-interval'],
   env: {
     BENCHKIT_FIXTURE_PID_FILE: pidFile

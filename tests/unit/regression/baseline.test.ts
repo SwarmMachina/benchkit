@@ -6,7 +6,7 @@ import { isBaseline, validateBaseline } from '@swarmmachina/benchkit'
 const fixtures = ['http.json', 'ws.json', 'body-parser.json']
 
 async function readFixture(name: string) {
-  return JSON.parse(await fs.readFile(new URL(`../fixtures/${name}`, import.meta.url), 'utf8'))
+  return JSON.parse(await fs.readFile(new URL(`../../fixtures/regression/${name}`, import.meta.url), 'utf8'))
 }
 
 for (const fixture of fixtures) {

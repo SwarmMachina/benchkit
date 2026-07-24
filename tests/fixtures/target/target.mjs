@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises'
 import net from 'node:net'
-import { createTargetRuntime } from '../../dist/target/index.js'
+import { createTargetRuntime } from '../../../dist/target/index.js'
 
 /**
  *

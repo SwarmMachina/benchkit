@@ -8,14 +8,14 @@ interface ExportTarget {
 }
 
 test('every public export resolves to emitted runtime and declaration files', async () => {
-  const packageJson = JSON.parse(await fs.readFile(new URL('../../package.json', import.meta.url), 'utf8')) as {
+  const packageJson = JSON.parse(await fs.readFile(new URL('../../../package.json', import.meta.url), 'utf8')) as {
     name: string
     exports: Record<string, ExportTarget>
   }
 
   for (const [subpath, target] of Object.entries(packageJson.exports)) {
-    await fs.access(new URL(`../../${target.import}`, import.meta.url))
-    await fs.access(new URL(`../../${target.types}`, import.meta.url))
+    await fs.access(new URL(`../../../${target.import}`, import.meta.url))
+    await fs.access(new URL(`../../../${target.types}`, import.meta.url))
 
     const specifier = subpath === '.' ? packageJson.name : `${packageJson.name}/${subpath.slice(2)}`
     const exports = (await import(specifier)) as object
@@ -62,12 +62,12 @@ test('new benchmark primitives are available through explicit package exports', 
 })
 
 test('agent binary and embedded package version match package metadata', async () => {
-  const packageJson = JSON.parse(await fs.readFile(new URL('../../package.json', import.meta.url), 'utf8')) as {
+  const packageJson = JSON.parse(await fs.readFile(new URL('../../../package.json', import.meta.url), 'utf8')) as {
     version: string
     bin: Record<string, string>
   }
   const benchkit = (await import('@swarmmachina/benchkit')) as { BENCHKIT_VERSION: string }
-  const binary = await fs.readFile(new URL(`../../${packageJson.bin['benchkit-agent']}`, import.meta.url), 'utf8')
+  const binary = await fs.readFile(new URL(`../../../${packageJson.bin['benchkit-agent']}`, import.meta.url), 'utf8')
 
   assert.equal(benchkit.BENCHKIT_VERSION, packageJson.version)
   assert.match(binary, /^#!\/usr\/bin\/env node/u)

@@ -11,9 +11,9 @@ import {
   createTargetProvider,
   TargetUnreachableError,
   TimeoutError
-} from '../../dist/index.js'
+} from '../../../dist/index.js'
 
-const root = path.resolve(new URL('../../', import.meta.url).pathname)
+const root = path.resolve(new URL('../../../', import.meta.url).pathname)
 
 function isAlive(pid: number): boolean {
   try {
@@ -45,7 +45,7 @@ test('local stdio agent runs target readiness, metrics, and shutdown lifecycle',
     cwd: root,
     timeouts: { shutdownGraceMs: 300, killMs: 300 }
   })
-  const session = await provider.start({ entrypoint: './tests/fixtures/target.mjs' })
+  const session = await provider.start({ entrypoint: './tests/fixtures/target/target.mjs' })
 
   assert.equal(session.state, 'ready')
   await session.waitReachable()
@@ -79,7 +79,7 @@ test('target readiness timeout cleans up a started fixture process', async () =>
 
   await assert.rejects(
     provider.start({
-      entrypoint: './tests/fixtures/target.mjs',
+      entrypoint: './tests/fixtures/target/target.mjs',
       args: ['--ready-delay-ms', '10000'],
       env: { BENCHKIT_FIXTURE_PID_FILE: pidFile }
     }),
@@ -96,7 +96,7 @@ test('startup failures expose bounded target diagnostics', async () => {
 
   await assert.rejects(
     provider.start({
-      entrypoint: './tests/fixtures/target.mjs',
+      entrypoint: './tests/fixtures/target/target.mjs',
       args: ['--fail-before-ready']
     }),
     (error: unknown) => {
@@ -117,7 +117,7 @@ test('reachability failure contains bind/connect diagnostics', async () => {
     cwd: root,
     connectHost: '127.0.0.2'
   })
-  const session = await provider.start({ entrypoint: './tests/fixtures/target.mjs' })
+  const session = await provider.start({ entrypoint: './tests/fixtures/target/target.mjs' })
 
   try {
     await assert.rejects(session.waitReachable({ timeoutMs: 150, retryMs: 25 }), (error: unknown) => {
@@ -137,7 +137,7 @@ test('reachability failure contains bind/connect diagnostics', async () => {
 test('runner crash closes agent stdio and does not orphan the target', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'benchkit-orphan-'))
   const pidFile = path.join(directory, 'target.pid')
-  const runner = spawn(process.execPath, ['./tests/fixtures/start-and-hold.mjs', pidFile], {
+  const runner = spawn(process.execPath, ['./tests/fixtures/target/start-and-hold.mjs', pidFile], {
     cwd: root,
     stdio: ['ignore', 'pipe', 'pipe']
   })
@@ -200,7 +200,7 @@ test('agent termination signal cleans up its target', async () => {
       payload: {
         cwd: root,
         bindHost: '127.0.0.1',
-        entrypoint: './tests/fixtures/target.mjs',
+        entrypoint: './tests/fixtures/target/target.mjs',
         args: [],
         execArgv: [],
         env: { BENCHKIT_FIXTURE_PID_FILE: pidFile },
@@ -232,7 +232,7 @@ test(
       }
     })
     const session = await provider.start({
-      entrypoint: './tests/fixtures/target.mjs'
+      entrypoint: './tests/fixtures/target/target.mjs'
     })
 
     await session.waitReachable()
