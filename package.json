@@ -298,6 +298,8 @@
     "test:unit": "node scripts/clean-dist.js && tsc && tsc -p tsconfig.package-test.json && node scripts/run-tests.js unit",
     "test:integration": "node scripts/clean-dist.js && tsc && node scripts/run-tests.js integration",
     "test:packed-types": "pnpm build && node scripts/test-packed-types.js",
+    "test:ssh-soak": "pnpm build && node scripts/run-ssh-smoke.js --soak",
+    "test:ssh-smoke": "pnpm build && node scripts/run-ssh-smoke.js",
     "release:verify-tag": "node scripts/verify-release.js",
     "release:verify-published": "node scripts/verify-published.js",
     "release:publish": "node scripts/publish-release.js",

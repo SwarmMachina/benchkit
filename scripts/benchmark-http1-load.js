@@ -1,13 +1,14 @@
 import http from 'node:http'
 import os from 'node:os'
 import { runHttp1Load } from '../dist/load/http1/index.js'
+import { numberEnvironment } from './helpers/environment.js'
 
 const connections = numberEnvironment('BENCHKIT_HTTP_CONNECTIONS', 100)
 const pipelining = numberEnvironment('BENCHKIT_HTTP_PIPELINING', 10)
 const durationMs = numberEnvironment('BENCHKIT_HTTP_DURATION_MS', 2_000)
 const warmupMs = numberEnvironment('BENCHKIT_HTTP_WARMUP_MS', 500)
 const workers = Math.min(numberEnvironment('BENCHKIT_HTTP_WORKERS', 4), connections, os.availableParallelism())
-const rate = optionalNumberEnvironment('BENCHKIT_HTTP_RATE')
+const rate = numberEnvironment('BENCHKIT_HTTP_RATE')
 const server = http.createServer((request, response) => {
   request.resume()
   response.setHeader('content-type', 'application/json')
@@ -62,47 +63,6 @@ try {
   await new Promise((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()))
   })
-}
-
-/**
- * @param {string} name
- * @returns {number | undefined}
- */
-function optionalNumberEnvironment(name) {
-  const raw = process.env[name]
-
-  if (raw === undefined) {
-    return undefined
-  }
-
-  const value = Number(raw)
-
-  if (!Number.isFinite(value) || value <= 0) {
-    throw new TypeError(`${name} must be a positive number`)
-  }
-
-  return value
-}
-
-/**
- * @param {string} name
- * @param {number} fallback
- * @returns {number}
- */
-function numberEnvironment(name, fallback) {
-  const raw = process.env[name]
-
-  if (raw === undefined) {
-    return fallback
-  }
-
-  const value = Number(raw)
-
-  if (!Number.isFinite(value) || value <= 0) {
-    throw new TypeError(`${name} must be a positive number`)
-  }
-
-  return value
 }
 
 /**
