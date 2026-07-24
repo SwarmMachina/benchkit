@@ -17,39 +17,63 @@ if (!parentPort) {
 }
 
 const port = parentPort
+const RATE_TICK_MS = 1
+const MAX_BATCH_BYTES = 1024 * 1024
+
+type WorkerPhase = 'idle' | 'warmup' | 'warmup-draining' | 'measurement' | 'finished'
 
 async function runWorker(data: Http1WorkerData): Promise<void> {
   const request = Buffer.from(data.request)
   const requestBatch =
-    request.length * data.pipelining <= 1024 * 1024
+    request.length * data.pipelining <= MAX_BATCH_BYTES
       ? Buffer.concat(Array.from({ length: data.pipelining }, () => request))
       : null
   const latency = createBoundedLatencyRecorder()
-  const statusCodes: Record<string, number> = {}
+  const statusCodeCounts = new Float64Array(600)
   const errors: Http1WorkerErrorMetrics = {
     connection: 0,
     timeout: 0,
     protocol: 0,
     abortedRequests: 0
   }
-  const connections = new Set<Http1Connection>()
+  const connections: Http1Connection[] = []
 
   let connected = 0
   let readySent = false
+  let phase: WorkerPhase = 'idle'
   let running = false
-  let stopping = false
   let startedAt = 0
   let stopAt = 0
   let stopTimer: NodeJS.Timeout | null = null
+  let rateTimer: NodeJS.Timeout | null = null
   let memoryTimer: NodeJS.Timeout | null = null
+  let phaseScheduled = 0
+  let nextRateConnection = 0
   let sent = 0
   let completed = 0
+  let bytesWritten = 0
   let bytesRead = 0
   let non2xx = 0
+  let socketWriteCalls = 0
+  let backpressureEvents = 0
+  let drainWaitMs = 0
+  let inFlightAtStop = 0
+  let rateDropped = 0
+  let scheduleLagTotalMs = 0
+  let maxScheduleLagMs = 0
+  let scheduledRequests = 0
   let eluBefore: ReturnType<typeof performance.eventLoopUtilization> | null = null
   let heapUsedPeakBytes = 0
   let externalPeakBytes = 0
   let arrayBuffersPeakBytes = 0
+
+  function isMeasurement(): boolean {
+    return phase === 'measurement'
+  }
+
+  function isClosedLoop(): boolean {
+    return data.ratePerSecond === undefined
+  }
 
   function sampleMemory(): void {
     const memory = process.memoryUsage()
@@ -59,10 +83,35 @@ async function runWorker(data: Http1WorkerData): Promise<void> {
     arrayBuffersPeakBytes = Math.max(arrayBuffersPeakBytes, memory.arrayBuffers)
   }
 
+  function resetMeasurement(): void {
+    latency.reset()
+    statusCodeCounts.fill(0)
+    errors.connection = 0
+    errors.timeout = 0
+    errors.protocol = 0
+    errors.abortedRequests = 0
+    sent = 0
+    completed = 0
+    bytesWritten = 0
+    bytesRead = 0
+    non2xx = 0
+    socketWriteCalls = 0
+    backpressureEvents = 0
+    drainWaitMs = 0
+    inFlightAtStop = 0
+    rateDropped = 0
+    scheduleLagTotalMs = 0
+    maxScheduleLagMs = 0
+    scheduledRequests = 0
+    heapUsedPeakBytes = 0
+    externalPeakBytes = 0
+    arrayBuffersPeakBytes = 0
+  }
+
   function onConnected(connection: Http1Connection): void {
     connected++
 
-    if (running) {
+    if (running && isClosedLoop()) {
       connection.fillPipeline()
     }
 
@@ -74,13 +123,20 @@ async function runWorker(data: Http1WorkerData): Promise<void> {
 
   function onDisconnected(): void {
     connected = Math.max(0, connected - 1)
+
+    if (phase === 'warmup-draining') {
+      maybeCompleteWarmup()
+    }
   }
 
   function onResponse(connection: Http1Connection, statusCode: number): boolean {
     const sentAt = connection.timestamps.shift()
 
     if (sentAt === null) {
-      errors.protocol++
+      if (isMeasurement()) {
+        errors.protocol++
+      }
+
       connection.reconnectAfterProtocolError()
 
       return false
@@ -88,53 +144,77 @@ async function runWorker(data: Http1WorkerData): Promise<void> {
 
     const now = performance.now()
 
-    completed++
-    statusCodes[String(statusCode)] = (statusCodes[String(statusCode)] ?? 0) + 1
+    if (isMeasurement()) {
+      completed++
+      statusCodeCounts[statusCode] = (statusCodeCounts[statusCode] ?? 0) + 1
 
-    if (statusCode < 200 || statusCode >= 300) {
-      non2xx++
+      if (statusCode < 200 || statusCode >= 300) {
+        non2xx++
+      }
+
+      latency.record(now - sentAt)
     }
 
-    latency.record(now - sentAt)
+    if (phase === 'warmup-draining') {
+      maybeCompleteWarmup()
+    }
 
-    return running && now < stopAt
+    return isClosedLoop() && running && now < stopAt
   }
 
-  function start(): void {
-    if (running || stopping) {
-      return
+  function startPhase(command: Extract<Http1WorkerCommand, { type: 'start' }>): void {
+    if (phase !== 'idle') {
+      throw new Error(`cannot start HTTP/1 ${command.phase} phase while worker is ${phase}`)
+    }
+
+    if (command.phase === 'measurement') {
+      for (const connection of connections) {
+        connection.resetPhaseState()
+      }
+
+      resetMeasurement()
+      phase = 'measurement'
+      eluBefore = performance.eventLoopUtilization()
+      sampleMemory()
+      memoryTimer = setInterval(sampleMemory, data.memorySampleMs)
+    } else {
+      phase = 'warmup'
     }
 
     running = true
     startedAt = performance.now()
-    stopAt = startedAt + data.durationMs
-    eluBefore = performance.eventLoopUtilization()
-    sampleMemory()
-    memoryTimer = setInterval(sampleMemory, data.memorySampleMs)
+    stopAt = startedAt + command.durationMs
+    phaseScheduled = 0
+    nextRateConnection = 0
 
-    for (const connection of connections) {
-      connection.fillPipeline()
+    if (isClosedLoop()) {
+      for (const connection of connections) {
+        connection.fillPipeline()
+      }
+    } else {
+      rateTimer = setInterval(scheduleRate, RATE_TICK_MS)
     }
 
-    stopTimer = setTimeout(finish, data.durationMs)
+    stopTimer = setTimeout(endPhase, command.durationMs)
   }
 
-  function finish(): void {
-    if (stopping) {
+  function endPhase(): void {
+    if (phase !== 'warmup' && phase !== 'measurement') {
       return
     }
 
-    stopping = true
     running = false
+    clearPhaseTimers()
 
-    if (stopTimer) {
-      clearTimeout(stopTimer)
+    if (phase === 'warmup') {
+      phase = 'warmup-draining'
+      maybeCompleteWarmup()
+
+      return
     }
 
-    if (memoryTimer) {
-      clearInterval(memoryTimer)
-    }
-
+    phase = 'finished'
+    inFlightAtStop = totalInFlight()
     sampleMemory()
 
     for (const connection of connections) {
@@ -147,11 +227,20 @@ async function runWorker(data: Http1WorkerData): Promise<void> {
       durationMs,
       sent,
       completed,
+      bytesWritten,
       bytesRead,
-      statusCodes,
+      statusCodes: statusCodesResult(),
       non2xx,
       errors,
       latencySnapshot: latency.snapshot(),
+      socketWriteCalls,
+      backpressureEvents,
+      drainWaitMs,
+      inFlightAtStop,
+      rateDropped,
+      scheduleLagTotalMs,
+      maxScheduleLagMs,
+      scheduledRequests,
       eluPct: elu.utilization * 100,
       heapUsedPeakBytes,
       externalPeakBytes,
@@ -162,12 +251,124 @@ async function runWorker(data: Http1WorkerData): Promise<void> {
     port.close()
   }
 
+  function maybeCompleteWarmup(): void {
+    if (phase !== 'warmup-draining' || totalInFlight() !== 0) {
+      return
+    }
+
+    for (const connection of connections) {
+      connection.resetPhaseState()
+    }
+
+    phase = 'idle'
+    post({ type: 'warmup-complete' })
+  }
+
+  function clearPhaseTimers(): void {
+    if (stopTimer) {
+      clearTimeout(stopTimer)
+      stopTimer = null
+    }
+
+    if (rateTimer) {
+      clearInterval(rateTimer)
+      rateTimer = null
+    }
+
+    if (memoryTimer) {
+      clearInterval(memoryTimer)
+      memoryTimer = null
+    }
+  }
+
+  function totalInFlight(): number {
+    let total = 0
+
+    for (const connection of connections) {
+      total += connection.timestamps.size
+    }
+
+    return total
+  }
+
+  function scheduleRate(): void {
+    const rate = data.ratePerSecond
+
+    if (!running || rate === undefined) {
+      return
+    }
+
+    const now = performance.now()
+    const globalExpected = Math.floor(((Math.min(now, stopAt) - startedAt) * rate) / 1000)
+    const expected =
+      globalExpected <= data.rateSequenceOffset
+        ? 0
+        : Math.floor((globalExpected - 1 - data.rateSequenceOffset) / data.rateSequenceStride) + 1
+
+    let due = expected - phaseScheduled
+
+    while (due > 0) {
+      const sequence = data.rateSequenceOffset + 1 + phaseScheduled * data.rateSequenceStride
+      const scheduledAt = startedAt + (sequence * 1000) / rate
+      const connection = nextAvailableRateConnection()
+
+      phaseScheduled++
+      due--
+
+      if (connection) {
+        connection.queueRateRequest(scheduledAt)
+      } else {
+        if (isMeasurement()) {
+          rateDropped += due + 1
+        }
+
+        phaseScheduled += due
+        due = 0
+      }
+    }
+
+    for (const connection of connections) {
+      connection.flushRateRequests()
+    }
+  }
+
+  function nextAvailableRateConnection(): Http1Connection | null {
+    for (let attempt = 0; attempt < connections.length; attempt++) {
+      const index = nextRateConnection
+
+      nextRateConnection = (nextRateConnection + 1) % connections.length
+
+      const connection = connections[index]
+
+      if (connection?.canQueueRateRequest()) {
+        return connection
+      }
+    }
+
+    return null
+  }
+
+  function statusCodesResult(): Record<string, number> {
+    const result: Record<string, number> = {}
+
+    for (let statusCode = 100; statusCode < statusCodeCounts.length; statusCode++) {
+      const count = statusCodeCounts[statusCode] ?? 0
+
+      if (count > 0) {
+        result[String(statusCode)] = count
+      }
+    }
+
+    return result
+  }
+
   class Http1Connection {
     readonly timestamps = new TimestampQueue(data.pipelining)
     readonly #parser = new Http1ResponseParser({
       requestMethod: data.method,
       maxHeaderBytes: data.maxHeaderBytes
     })
+    readonly #rateBatch: number[] = []
 
     #socket: Socket | TLSSocket | null = null
     #connected = false
@@ -175,6 +376,10 @@ async function runWorker(data: Http1WorkerData): Promise<void> {
     #stopped = false
     #protocolFailure = false
     #timeoutFailure = false
+    #backpressured = false
+    #backpressureMeasured = false
+    #backpressureStartedAt = 0
+    #pendingClosedLoop = 0
 
     connect(): void {
       if (this.#stopped || this.#socket) {
@@ -200,12 +405,11 @@ async function runWorker(data: Http1WorkerData): Promise<void> {
           return
         }
 
-        bytesRead += chunk.length
+        if (isMeasurement()) {
+          bytesRead += chunk.length
+        }
 
         try {
-          // Refill once per received TCP chunk. Writing once per completed
-          // response turns the load generator into a syscall bottleneck at
-          // high pipeline depths without changing the outstanding request cap.
           let replenish = 0
 
           this.#parser.push(chunk, (statusCode) => {
@@ -215,16 +419,33 @@ async function runWorker(data: Http1WorkerData): Promise<void> {
           })
 
           if (replenish > 0) {
-            this.send(replenish)
+            this.#replenishClosedLoop(replenish)
           }
         } catch {
-          errors.protocol++
+          if (isMeasurement()) {
+            errors.protocol++
+          }
+
           this.#protocolFailure = true
           socket.destroy()
         }
       })
+      socket.on('drain', () => {
+        if (socket !== this.#socket || !this.#backpressured) {
+          return
+        }
+
+        this.#endBackpressure()
+
+        if (this.#pendingClosedLoop > 0 && running && isClosedLoop()) {
+          const pending = this.#pendingClosedLoop
+
+          this.#pendingClosedLoop = 0
+          this.#send(pending)
+        }
+      })
       socket.on('timeout', () => {
-        if (running) {
+        if (isMeasurement()) {
           errors.timeout++
         }
 
@@ -232,7 +453,7 @@ async function runWorker(data: Http1WorkerData): Promise<void> {
         socket.destroy()
       })
       socket.on('error', () => {
-        if (running && !this.#protocolFailure && !this.#timeoutFailure) {
+        if (isMeasurement() && !this.#protocolFailure && !this.#timeoutFailure) {
           errors.connection++
         }
       })
@@ -242,63 +463,68 @@ async function runWorker(data: Http1WorkerData): Promise<void> {
         }
 
         this.#socket = null
+        this.#endBackpressure()
 
         if (this.#connected) {
           this.#connected = false
           onDisconnected()
         }
 
-        if (!stopping && this.timestamps.size > 0) {
+        if (isMeasurement() && phase !== 'finished' && this.timestamps.size > 0) {
           errors.abortedRequests += this.timestamps.size
         }
 
         this.timestamps.clear()
+        this.#rateBatch.length = 0
+        this.#pendingClosedLoop = 0
         this.#parser.reset()
         this.#protocolFailure = false
         this.#timeoutFailure = false
 
-        if (!this.#stopped && !stopping) {
+        if (phase === 'warmup-draining') {
+          maybeCompleteWarmup()
+        }
+
+        if (!this.#stopped && phase !== 'finished') {
           this.#scheduleReconnect()
         }
       })
     }
 
     fillPipeline(): void {
-      if (!running || !this.#connected || this.timestamps.size !== 0) {
+      if (!running || !isClosedLoop() || !this.#connected || this.timestamps.size !== 0) {
         return
       }
 
-      this.send(data.pipelining)
+      this.#replenishClosedLoop(data.pipelining)
     }
 
-    send(count: number): void {
-      const socket = this.#socket
+    canQueueRateRequest(): boolean {
+      return (
+        running &&
+        !isClosedLoop() &&
+        this.#connected &&
+        !this.#stopped &&
+        !this.#backpressured &&
+        this.timestamps.size + this.#rateBatch.length < data.pipelining
+      )
+    }
 
-      if (!socket || !this.#connected || this.#stopped || count <= 0) {
+    queueRateRequest(scheduledAt: number): void {
+      if (!this.canQueueRateRequest()) {
+        throw new Error('HTTP/1 fixed-rate scheduler exceeded connection capacity')
+      }
+
+      this.#rateBatch.push(scheduledAt)
+    }
+
+    flushRateRequests(): void {
+      if (this.#rateBatch.length === 0) {
         return
       }
 
-      const now = performance.now()
-
-      for (let index = 0; index < count; index++) {
-        this.timestamps.push(now)
-      }
-
-      sent += count
-
-      if (count === data.pipelining && requestBatch) {
-        socket.write(requestBatch)
-      } else if (count === 1) {
-        socket.write(request)
-      } else {
-        socket.cork()
-
-        for (let index = 0; index < count; index++) {
-          socket.write(request)
-        }
-
-        socket.uncork()
-      }
+      this.#send(this.#rateBatch.length, this.#rateBatch)
+      this.#rateBatch.length = 0
     }
 
     reconnectAfterProtocolError(): void {
@@ -306,11 +532,129 @@ async function runWorker(data: Http1WorkerData): Promise<void> {
       this.#socket?.destroy()
     }
 
+    resetPhaseState(): void {
+      this.#rateBatch.length = 0
+      this.#pendingClosedLoop = 0
+    }
+
     stop(): void {
       this.#stopped = true
+      this.#endBackpressure()
       this.#socket?.destroy()
       this.#socket = null
       this.timestamps.clear()
+      this.#rateBatch.length = 0
+      this.#pendingClosedLoop = 0
+    }
+
+    #replenishClosedLoop(count: number): void {
+      if (!running || !isClosedLoop() || count <= 0) {
+        return
+      }
+
+      if (this.#backpressured) {
+        this.#pendingClosedLoop += count
+
+        return
+      }
+
+      this.#send(count)
+    }
+
+    #send(count: number, scheduledTimes?: readonly number[]): void {
+      const socket = this.#socket
+
+      if (!socket || !this.#connected || this.#stopped || count <= 0) {
+        return
+      }
+
+      const available = data.pipelining - this.timestamps.size
+
+      if (count > available) {
+        throw new Error('HTTP/1 pipeline timestamp queue overflow')
+      }
+
+      const now = performance.now()
+
+      for (let index = 0; index < count; index++) {
+        const scheduledAt = scheduledTimes?.[index]
+        const timestamp = scheduledAt !== undefined && data.correctCoordinatedOmission ? scheduledAt : now
+
+        this.timestamps.push(timestamp)
+
+        if (isMeasurement() && scheduledAt !== undefined) {
+          const lag = Math.max(0, now - scheduledAt)
+
+          scheduleLagTotalMs += lag
+          maxScheduleLagMs = Math.max(maxScheduleLagMs, lag)
+          scheduledRequests++
+        }
+      }
+
+      if (isMeasurement()) {
+        sent += count
+        bytesWritten += request.length * count
+      }
+
+      let accepted = true
+
+      if (count === data.pipelining && requestBatch) {
+        accepted = socket.write(requestBatch)
+
+        if (isMeasurement()) {
+          socketWriteCalls++
+        }
+      } else if (count === 1) {
+        accepted = socket.write(request)
+
+        if (isMeasurement()) {
+          socketWriteCalls++
+        }
+      } else {
+        socket.cork()
+
+        for (let index = 0; index < count; index++) {
+          accepted = socket.write(request) && accepted
+
+          if (isMeasurement()) {
+            socketWriteCalls++
+          }
+        }
+
+        socket.uncork()
+      }
+
+      if (!accepted) {
+        this.#startBackpressure()
+      }
+    }
+
+    #startBackpressure(): void {
+      if (this.#backpressured) {
+        return
+      }
+
+      this.#backpressured = true
+      this.#backpressureMeasured = isMeasurement()
+      this.#backpressureStartedAt = performance.now()
+
+      if (this.#backpressureMeasured) {
+        backpressureEvents++
+      }
+    }
+
+    #endBackpressure(): void {
+      if (!this.#backpressured) {
+        return
+      }
+
+      if (this.#backpressureMeasured) {
+        drainWaitMs += performance.now() - this.#backpressureStartedAt
+      }
+
+      this.#backpressured = false
+      this.#backpressureMeasured = false
+      this.#backpressureStartedAt = 0
     }
 
     #scheduleReconnect(): void {
@@ -329,13 +673,28 @@ async function runWorker(data: Http1WorkerData): Promise<void> {
   for (let index = 0; index < data.connections; index++) {
     const connection = new Http1Connection()
 
-    connections.add(connection)
+    connections.push(connection)
     connection.connect()
   }
 
   port.on('message', (message: Http1WorkerCommand) => {
-    if (message.type === 'start') {
-      start()
+    try {
+      if (message.type === 'start') {
+        startPhase(message)
+      } else {
+        phase = 'finished'
+        running = false
+        clearPhaseTimers()
+
+        for (const connection of connections) {
+          connection.stop()
+        }
+
+        port.close()
+      }
+    } catch (error) {
+      post({ type: 'fatal', error: error instanceof Error ? error.message : String(error) })
+      port.close()
     }
   })
 }

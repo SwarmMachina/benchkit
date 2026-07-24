@@ -95,10 +95,11 @@ the package root never initializes load-generator code.
 
 ## HTTP/1 load generation
 
-`runHttp1Load()` drives a fixed number of HTTP/1.1 keep-alive connections from
-worker threads. It supports pipelining, discarded warmup, fixed and chunked
+`runHttp1Load()` drives HTTP/1.1 keep-alive connections from persistent worker
+threads. It supports pipelining, same-worker warmup, closed-loop or fixed-rate
+scheduling, coordinated-omission correction, backpressure, fixed and chunked
 responses, bounded latency histograms, status/error counters and generator-side
-ELU and memory.
+CPU, ELU and memory.
 
 ```ts
 import { runHttp1Load } from '@swarmmachina/benchkit/load/http1'
@@ -118,14 +119,16 @@ console.log(
   result.latencyMs.averageMs,
   result.latencyMs.p95Ms,
   result.latencyMs.p99Ms,
+  result.loadGenerator.cpuCorePct,
+  result.transport.backpressureEvents,
   result.loadGenerator.maxWorkerEluPct
 )
 ```
 
-The driver is closed-loop: each completed response releases one replacement
-request on the same connection. See [HTTP/1 load generator](docs/http1-load.md)
-for framing support, measurement semantics, limitations and the local capacity
-smoke command.
+Omit `rate` for closed-loop saturation or set an aggregate requests-per-second
+rate for open scheduling. See [HTTP/1 load generator](docs/http1-load.md) for
+framing support, measurement semantics, transport-health metrics, limitations
+and the local capacity smoke command.
 
 ## Statistics
 

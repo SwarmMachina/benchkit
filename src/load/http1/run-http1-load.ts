@@ -35,6 +35,7 @@ interface PhaseResult {
   finishedAt: Date
   durationMs: number
   workers: Http1WorkerResult[]
+  cpuMs: number
   parentEluPct: number
   processMemory: ProcessMemorySummary
 }
@@ -44,11 +45,7 @@ export default async function runHttp1Load(options: RunHttp1LoadOptions): Promis
 
   throwIfAborted(normalized.signal)
 
-  if (normalized.parameters.warmupMs > 0) {
-    await runPhase(normalized, normalized.parameters.warmupMs)
-  }
-
-  const phase = await runPhase(normalized, normalized.parameters.durationMs)
+  const phase = await runLifecycle(normalized)
 
   return aggregateResult(normalized.parameters, phase)
 }
@@ -75,9 +72,18 @@ function normalizeOptions(options: RunHttp1LoadOptions): NormalizedHttp1LoadOpti
   const connections = positiveInteger(options.connections ?? DEFAULT_CONNECTIONS, 'connections')
   const pipelining = positiveInteger(options.pipelining ?? DEFAULT_PIPELINING, 'pipelining')
   const workers = positiveInteger(options.workers ?? Math.min(4, os.availableParallelism(), connections), 'workers')
+  const rate = options.rate === undefined ? null : positiveNumber(options.rate, 'rate')
 
   if (workers > connections) {
     throw new RangeError('workers must not exceed connections')
+  }
+
+  if (options.correctCoordinatedOmission !== undefined && typeof options.correctCoordinatedOmission !== 'boolean') {
+    throw new TypeError('correctCoordinatedOmission must be a boolean')
+  }
+
+  if (rate === null && options.correctCoordinatedOmission !== undefined) {
+    throw new TypeError('correctCoordinatedOmission requires rate')
   }
 
   const durationMs = positiveNumber(options.durationMs ?? DEFAULT_DURATION_MS, 'durationMs')
@@ -119,6 +125,9 @@ function normalizeOptions(options: RunHttp1LoadOptions): NormalizedHttp1LoadOpti
     connections,
     pipelining,
     workers,
+    mode: rate === null ? 'closed-loop' : 'fixed-rate',
+    rate,
+    correctCoordinatedOmission: rate === null ? false : (options.correctCoordinatedOmission ?? true),
     durationMs,
     warmupMs,
     timeoutMs
@@ -139,10 +148,10 @@ function normalizeOptions(options: RunHttp1LoadOptions): NormalizedHttp1LoadOpti
   }
 }
 
-async function runPhase(options: NormalizedHttp1LoadOptions, durationMs: number): Promise<PhaseResult> {
+async function runLifecycle(options: NormalizedHttp1LoadOptions): Promise<PhaseResult> {
   throwIfAborted(options.signal)
 
-  const workers = createWorkers(options, durationMs)
+  const workers = createWorkers(options)
   const memory = new ProcessMemorySampler()
 
   let memoryStarted = false
@@ -154,23 +163,52 @@ async function runPhase(options: NormalizedHttp1LoadOptions, durationMs: number)
       )
     )
 
+    if (options.parameters.warmupMs > 0) {
+      const warmupResults = workers.map((worker) =>
+        waitForWorkerMessage(
+          worker,
+          'warmup-complete',
+          options.parameters.warmupMs + options.parameters.timeoutMs + 5_000,
+          options.signal,
+          'HTTP/1 warmup'
+        )
+      )
+
+      for (const worker of workers) {
+        const command: Http1WorkerCommand = {
+          type: 'start',
+          phase: 'warmup',
+          durationMs: options.parameters.warmupMs
+        }
+
+        worker.postMessage(command)
+      }
+
+      await Promise.all(warmupResults)
+    }
+
     const results = workers.map((worker) =>
       waitForWorkerMessage(
         worker,
         'result',
-        durationMs + options.parameters.timeoutMs + 5_000,
+        options.parameters.durationMs + options.parameters.timeoutMs + 5_000,
         options.signal,
-        'HTTP/1 load phase'
+        'HTTP/1 measurement'
       )
     )
     const startedAt = new Date()
     const eluBefore = performance.eventLoopUtilization()
+    const cpuBefore = process.cpuUsage()
 
     memory.start({ sampleMs: options.memorySampleMs })
     memoryStarted = true
 
     for (const worker of workers) {
-      const command: Http1WorkerCommand = { type: 'start' }
+      const command: Http1WorkerCommand = {
+        type: 'start',
+        phase: 'measurement',
+        durationMs: options.parameters.durationMs
+      }
 
       worker.postMessage(command)
     }
@@ -178,6 +216,7 @@ async function runPhase(options: NormalizedHttp1LoadOptions, durationMs: number)
     const messages = await Promise.all(results)
     const finishedAt = new Date()
     const elu = performance.eventLoopUtilization(eluBefore)
+    const cpu = process.cpuUsage(cpuBefore)
     const processMemory = memory.stop()
 
     memoryStarted = false
@@ -199,6 +238,7 @@ async function runPhase(options: NormalizedHttp1LoadOptions, durationMs: number)
       finishedAt,
       durationMs: Math.max(...workerResults.map((result) => result.durationMs)),
       workers: workerResults,
+      cpuMs: (cpu.user + cpu.system) / 1000,
       parentEluPct: elu.utilization * 100,
       processMemory
     }
@@ -211,24 +251,28 @@ async function runPhase(options: NormalizedHttp1LoadOptions, durationMs: number)
   }
 }
 
-function createWorkers(options: NormalizedHttp1LoadOptions, durationMs: number): Worker[] {
+function createWorkers(options: NormalizedHttp1LoadOptions): Worker[] {
   const workers: Worker[] = []
   const baseConnections = Math.floor(options.parameters.connections / options.parameters.workers)
   const extraConnections = options.parameters.connections % options.parameters.workers
 
   for (let index = 0; index < options.parameters.workers; index++) {
+    const workerConnections = baseConnections + (index < extraConnections ? 1 : 0)
     const data: Http1WorkerData = {
       request: options.request,
       protocol: options.protocol,
       hostname: options.hostname,
       port: options.port,
       method: options.parameters.method,
-      connections: baseConnections + (index < extraConnections ? 1 : 0),
+      connections: workerConnections,
       pipelining: options.parameters.pipelining,
-      durationMs,
+      rateSequenceOffset: index,
+      rateSequenceStride: options.parameters.workers,
+      correctCoordinatedOmission: options.parameters.correctCoordinatedOmission,
       timeoutMs: options.parameters.timeoutMs,
       memorySampleMs: options.memorySampleMs,
       maxHeaderBytes: options.maxHeaderBytes,
+      ...(options.parameters.rate === null ? {} : { ratePerSecond: options.parameters.rate }),
       ...(options.socketPath === undefined ? {} : { socketPath: options.socketPath }),
       ...(options.tls === undefined ? {} : { tls: options.tls })
     }
@@ -252,19 +296,37 @@ function aggregateResult(parameters: Http1LoadParameters, phase: PhaseResult): H
 
   let sent = 0
   let completed = 0
+  let bytesWritten = 0
   let bytesRead = 0
   let non2xx = 0
+  let socketWriteCalls = 0
+  let backpressureEvents = 0
+  let drainWaitMs = 0
+  let inFlightAtStop = 0
+  let rateDropped = 0
+  let scheduleLagTotalMs = 0
+  let maxScheduleLagMs = 0
+  let scheduledRequests = 0
 
   for (const worker of phase.workers) {
     latency.merge(worker.latencySnapshot)
     sent += worker.sent
     completed += worker.completed
+    bytesWritten += worker.bytesWritten
     bytesRead += worker.bytesRead
     non2xx += worker.non2xx
     errors.connection += worker.errors.connection
     errors.timeout += worker.errors.timeout
     errors.protocol += worker.errors.protocol
     errors.abortedRequests += worker.errors.abortedRequests
+    socketWriteCalls += worker.socketWriteCalls
+    backpressureEvents += worker.backpressureEvents
+    drainWaitMs += worker.drainWaitMs
+    inFlightAtStop += worker.inFlightAtStop
+    rateDropped += worker.rateDropped
+    scheduleLagTotalMs += worker.scheduleLagTotalMs
+    maxScheduleLagMs = Math.max(maxScheduleLagMs, worker.maxScheduleLagMs)
+    scheduledRequests += worker.scheduledRequests
 
     for (const [statusCode, count] of Object.entries(worker.statusCodes)) {
       statusCodes[statusCode] = (statusCodes[statusCode] ?? 0) + count
@@ -286,6 +348,7 @@ function aggregateResult(parameters: Http1LoadParameters, phase: PhaseResult): H
       sent,
       completed,
       averagePerSecond: completed / (phase.durationMs / 1000),
+      bytesWritten,
       bytesRead
     },
     latencyMs: latency.summary(),
@@ -293,7 +356,20 @@ function aggregateResult(parameters: Http1LoadParameters, phase: PhaseResult): H
     statusCodes,
     non2xx,
     errors,
+    transport: {
+      socketWriteCalls,
+      requestsPerSocketWrite: socketWriteCalls > 0 ? sent / socketWriteCalls : null,
+      backpressureEvents,
+      drainWaitMs,
+      inFlightAtStop,
+      rateDropped,
+      meanScheduleLagMs: scheduledRequests > 0 ? scheduleLagTotalMs / scheduledRequests : null,
+      maxScheduleLagMs
+    },
     loadGenerator: {
+      cpuMs: phase.cpuMs,
+      cpuCorePct: phase.durationMs > 0 ? (phase.cpuMs / phase.durationMs) * 100 : 0,
+      cpuPerMillionRequestsMs: completed > 0 ? (phase.cpuMs / completed) * 1_000_000 : null,
       parentEluPct: phase.parentEluPct,
       maxWorkerEluPct,
       meanWorkerEluPct: workerElu.reduce((total, value) => total + value, 0) / workerElu.length,

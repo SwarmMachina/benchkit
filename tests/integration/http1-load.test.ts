@@ -4,11 +4,17 @@ import test from 'node:test'
 import { runHttp1Load } from '@swarmmachina/benchkit/load/http1'
 
 test('runHttp1Load drives pipelined content-length responses and reports generator health', async (context) => {
+  let connectionsOpened = 0
+
   const server = http.createServer((request, response) => {
     request.resume()
     response.statusCode = 200
     response.setHeader('content-length', '2')
     response.end('ok')
+  })
+
+  server.on('connection', () => {
+    connectionsOpened++
   })
   const port = await listen(server)
 
@@ -28,9 +34,12 @@ test('runHttp1Load drives pipelined content-length responses and reports generat
   assert.equal(result.parameters.name, 'content-length')
   assert.equal(result.parameters.connections, 4)
   assert.equal(result.parameters.pipelining, 4)
+  assert.equal(result.parameters.mode, 'closed-loop')
+  assert.equal(connectionsOpened, 4)
   assert.ok(result.requests.completed > 0)
   assert.ok(result.requests.sent >= result.requests.completed)
   assert.ok(result.requests.averagePerSecond > 0)
+  assert.ok(result.requests.bytesWritten > 0)
   assert.equal(result.statusCodes['200'], result.requests.completed)
   assert.equal(result.non2xx, 0)
   assert.deepEqual(result.errors, {
@@ -44,8 +53,99 @@ test('runHttp1Load drives pipelined content-length responses and reports generat
   assert.ok(result.latencyMs.p95Ms !== null)
   assert.ok(Number.isFinite(result.loadGenerator.parentEluPct))
   assert.ok(Number.isFinite(result.loadGenerator.maxWorkerEluPct))
+  assert.ok(result.loadGenerator.cpuMs > 0)
+  assert.ok(result.loadGenerator.cpuCorePct > 0)
+  assert.ok(result.loadGenerator.cpuPerMillionRequestsMs !== null)
   assert.ok(result.loadGenerator.processMemory.rss.peakBytes > 0)
   assert.ok(result.loadGenerator.workerHeapUsedPeakBytes > 0)
+  assert.ok(result.transport.socketWriteCalls > 0)
+  assert.ok(result.transport.requestsPerSocketWrite !== null)
+  assert.ok(result.transport.inFlightAtStop >= 0)
+})
+
+test('runHttp1Load applies fixed aggregate rate and reports scheduler health', async (context) => {
+  const server = http.createServer((request, response) => {
+    request.resume()
+    response.setHeader('content-length', '2')
+    response.end('ok')
+  })
+  const port = await listen(server)
+
+  context.after(() => close(server))
+
+  const result = await runHttp1Load({
+    url: `http://127.0.0.1:${port}/rate`,
+    connections: 4,
+    pipelining: 2,
+    workers: 2,
+    rate: 400,
+    warmupMs: 50,
+    durationMs: 500
+  })
+
+  assert.equal(result.parameters.mode, 'fixed-rate')
+  assert.equal(result.parameters.rate, 400)
+  assert.equal(result.parameters.correctCoordinatedOmission, true)
+  assert.ok(result.requests.sent >= 170)
+  assert.ok(result.requests.sent <= 210)
+  assert.equal(result.transport.rateDropped, 0)
+  assert.ok(result.transport.meanScheduleLagMs !== null)
+  assert.ok(result.transport.meanScheduleLagMs >= 0)
+  assert.ok(result.transport.maxScheduleLagMs >= result.transport.meanScheduleLagMs)
+  assert.equal(result.errors.total, 0)
+})
+
+test('runHttp1Load observes socket backpressure without exceeding pipeline capacity', async (context) => {
+  const server = http.createServer((request, response) => {
+    request.resume()
+    response.setHeader('content-length', '2')
+    response.end('ok')
+  })
+  const port = await listen(server)
+
+  context.after(() => close(server))
+
+  const result = await runHttp1Load({
+    url: `http://127.0.0.1:${port}/backpressure`,
+    method: 'POST',
+    body: 'x'.repeat(128 * 1024),
+    connections: 1,
+    pipelining: 8,
+    workers: 1,
+    durationMs: 150
+  })
+
+  assert.ok(result.requests.completed > 0)
+  assert.ok(result.transport.backpressureEvents > 0)
+  assert.ok(result.transport.drainWaitMs >= 0)
+  assert.ok(result.transport.inFlightAtStop <= 8)
+  assert.equal(result.errors.protocol, 0)
+})
+
+test('runHttp1Load drops fixed-rate arrivals instead of building an unbounded queue', async (context) => {
+  const server = http.createServer((request, response) => {
+    request.resume()
+    setTimeout(() => {
+      response.setHeader('content-length', '2')
+      response.end('ok')
+    }, 40)
+  })
+  const port = await listen(server)
+
+  context.after(() => close(server))
+
+  const result = await runHttp1Load({
+    url: `http://127.0.0.1:${port}/slow`,
+    connections: 1,
+    pipelining: 1,
+    workers: 1,
+    rate: 1_000,
+    durationMs: 150
+  })
+
+  assert.ok(result.transport.rateDropped > 0)
+  assert.ok(result.requests.sent < 10)
+  assert.ok(result.transport.inFlightAtStop <= 1)
 })
 
 test('runHttp1Load parses chunked responses and counts non-2xx status codes', async (context) => {

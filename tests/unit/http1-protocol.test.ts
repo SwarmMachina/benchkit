@@ -56,6 +56,25 @@ test('HTTP/1 response parser handles multiple fixed-length responses in one read
   assert.deepEqual(statuses, [200, 503])
 })
 
+test('HTTP/1 response parser handles allocation-free framing edge cases', () => {
+  const parser = new Http1ResponseParser({ requestMethod: 'GET', maxHeaderBytes: 4096 })
+  const statuses: number[] = []
+
+  parser.push(
+    Buffer.from(
+      [
+        'HTTP/1.1 204 No Content\r\n\r\n',
+        'HTTP/1.1 200 OK\r\nCONTENT-LENGTH: 2, 2\r\n\r\nok',
+        'HTTP/1.1 200 OK\r\nTransfer-Encoding: gzip, CHUNKED\r\n\r\n2\r\nok\r\n0\r\n\r\n'
+      ].join(''),
+      'latin1'
+    ),
+    (statusCode) => statuses.push(statusCode)
+  )
+
+  assert.deepEqual(statuses, [204, 200, 200])
+})
+
 test('HTTP/1 response parser rejects ambiguous and close-delimited framing', () => {
   const ambiguous = new Http1ResponseParser({ requestMethod: 'GET', maxHeaderBytes: 4096 })
   const closeDelimited = new Http1ResponseParser({ requestMethod: 'GET', maxHeaderBytes: 4096 })

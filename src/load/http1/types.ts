@@ -2,6 +2,7 @@ import type { BoundedLatencySnapshot, BoundedLatencySummary } from '../../measur
 import type { ProcessMemorySummary } from '../../measurement/process-memory.js'
 
 export type Http1HeaderValue = string | readonly string[]
+export type Http1LoadMode = 'closed-loop' | 'fixed-rate'
 
 export interface Http1TlsOptions {
   ca?: string | Buffer | readonly (string | Buffer)[]
@@ -20,6 +21,8 @@ export interface RunHttp1LoadOptions {
   connections?: number
   pipelining?: number
   workers?: number
+  rate?: number
+  correctCoordinatedOmission?: boolean
   durationMs?: number
   warmupMs?: number
   timeoutMs?: number
@@ -38,6 +41,9 @@ export interface Http1LoadParameters {
   connections: number
   pipelining: number
   workers: number
+  mode: Http1LoadMode
+  rate: number | null
+  correctCoordinatedOmission: boolean
   durationMs: number
   warmupMs: number
   timeoutMs: number
@@ -47,6 +53,7 @@ export interface Http1LoadRequestMetrics {
   sent: number
   completed: number
   averagePerSecond: number
+  bytesWritten: number
   bytesRead: number
 }
 
@@ -59,6 +66,9 @@ export interface Http1LoadErrorMetrics {
 }
 
 export interface Http1LoadGeneratorMetrics {
+  cpuMs: number
+  cpuCorePct: number
+  cpuPerMillionRequestsMs: number | null
   parentEluPct: number
   maxWorkerEluPct: number
   meanWorkerEluPct: number
@@ -67,6 +77,17 @@ export interface Http1LoadGeneratorMetrics {
   workerArrayBuffersPeakBytes: number
   processMemory: ProcessMemorySummary
   saturated: boolean
+}
+
+export interface Http1LoadTransportMetrics {
+  socketWriteCalls: number
+  requestsPerSocketWrite: number | null
+  backpressureEvents: number
+  drainWaitMs: number
+  inFlightAtStop: number
+  rateDropped: number
+  meanScheduleLagMs: number | null
+  maxScheduleLagMs: number
 }
 
 export interface Http1LoadResult {
@@ -80,5 +101,6 @@ export interface Http1LoadResult {
   statusCodes: Record<string, number>
   non2xx: number
   errors: Http1LoadErrorMetrics
+  transport: Http1LoadTransportMetrics
   loadGenerator: Http1LoadGeneratorMetrics
 }

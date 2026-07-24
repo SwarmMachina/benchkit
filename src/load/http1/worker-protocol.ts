@@ -11,7 +11,10 @@ export interface Http1WorkerData {
   method: string
   connections: number
   pipelining: number
-  durationMs: number
+  ratePerSecond?: number
+  rateSequenceOffset: number
+  rateSequenceStride: number
+  correctCoordinatedOmission: boolean
   timeoutMs: number
   memorySampleMs: number
   maxHeaderBytes: number
@@ -28,11 +31,20 @@ export interface Http1WorkerResult {
   durationMs: number
   sent: number
   completed: number
+  bytesWritten: number
   bytesRead: number
   statusCodes: Record<string, number>
   non2xx: number
   errors: Http1WorkerErrorMetrics
   latencySnapshot: BoundedLatencySnapshot
+  socketWriteCalls: number
+  backpressureEvents: number
+  drainWaitMs: number
+  inFlightAtStop: number
+  rateDropped: number
+  scheduleLagTotalMs: number
+  maxScheduleLagMs: number
+  scheduledRequests: number
   eluPct: number
   heapUsedPeakBytes: number
   externalPeakBytes: number
@@ -40,6 +52,10 @@ export interface Http1WorkerResult {
 }
 
 export type Http1WorkerMessage =
-  { type: 'ready' } | { type: 'result'; result: Http1WorkerResult } | { type: 'fatal'; error: string }
+  | { type: 'ready' }
+  | { type: 'warmup-complete' }
+  | { type: 'result'; result: Http1WorkerResult }
+  | { type: 'fatal'; error: string }
 
-export type Http1WorkerCommand = { type: 'start' }
+export type Http1WorkerCommand =
+  { type: 'start'; phase: 'warmup' | 'measurement'; durationMs: number } | { type: 'abort' }

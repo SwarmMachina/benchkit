@@ -23,6 +23,12 @@ test('runHttp1Load validates topology, URL and request framing before starting w
     }),
     /Content-Length header does not match request body/u
   )
+  await assert.rejects(runHttp1Load({ url: 'http://127.0.0.1', rate: 0 }), /rate must be a positive/u)
+  await assert.rejects(runHttp1Load({ url: 'http://127.0.0.1', correctCoordinatedOmission: true }), /requires rate/u)
+  await assert.rejects(
+    runHttp1Load({ url: 'http://127.0.0.1', rate: 10, correctCoordinatedOmission: 'yes' as never }),
+    /must be a boolean/u
+  )
 })
 
 test('runHttp1Load observes an already aborted signal before creating workers', async () => {
