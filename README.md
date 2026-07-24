@@ -104,9 +104,9 @@ Use the package root for the common API or a domain subpath for a narrower
 surface.
 
 ```ts
-import { createBoundedLatencyRecorder, measureBatch } from '@swarmmachina/benchkit/measurement'
+import { BoundedLatencyRecorder, measureBatch } from '@swarmmachina/benchkit/measurement'
 
-const latency = createBoundedLatencyRecorder({
+const latency = new BoundedLatencyRecorder({
   lowestDiscernibleMs: 0.001,
   highestTrackableMs: 60_000,
   relativeAccuracy: 0.01
@@ -130,14 +130,14 @@ results are required.
 
 ## Target orchestration
 
-`createTargetProvider()` runs the same short-lived control agent locally or
+`TargetProvider` runs the same short-lived control agent locally or
 over SSH. Load traffic connects directly to the target; it never passes through
 the control channel.
 
 ```ts
-import { createTargetProvider } from '@swarmmachina/benchkit'
+import { TargetProvider } from '@swarmmachina/benchkit'
 
-const provider = createTargetProvider({
+const provider = new TargetProvider({
   mode: 'local',
   cwd: process.cwd()
 })
@@ -161,7 +161,7 @@ try {
 }
 ```
 
-The target process integrates through `createTargetRuntime()` from
+The target process integrates through `TargetRuntime` from
 `@swarmmachina/benchkit/target`. Target lifecycle is explicit:
 
 ```text
@@ -248,12 +248,40 @@ pnpm run test
 pnpm run test:unit
 pnpm run test:integration
 pnpm run test:packed-types
+pnpm run test:ssh-smoke
 pnpm run bench:http1-load
 ```
 
 The release gate formats and type-checks the source, runs unit and integration
 tests, builds the package, packs it, and compiles a real consumer under both
 NodeNext and Bundler module resolution.
+
+### SSH smoke
+
+Requirements: Node.js 22 or 24, `tar`, key-based SSH, and a target port
+reachable from the workstation.
+
+```bash
+BENCHKIT_SSH_DESTINATION=bench@target.example \
+BENCHKIT_SSH_CONNECT_HOST=192.0.2.10 \
+pnpm run test:ssh-smoke
+```
+
+Use `pnpm run test:ssh-soak` for lifecycle, metrics, failures, timeouts,
+forced shutdown, diagnostics, and concurrency.
+
+| Variable                        | Default | Purpose                       |
+| ------------------------------- | ------- | ----------------------------- |
+| `BENCHKIT_SSH_DESTINATION`      | —       | SSH control endpoint          |
+| `BENCHKIT_SSH_CONNECT_HOST`     | —       | Host used by direct load      |
+| `BENCHKIT_SSH_REMOTE_BASE`      | `/tmp`  | Remote staging directory      |
+| `BENCHKIT_SSH_KEEP_REMOTE=1`    | off     | Keep staging files for debug  |
+| `BENCHKIT_SSH_SOAK_ITERATIONS`  | `20`    | Total lifecycle sessions      |
+| `BENCHKIT_SSH_SOAK_CONCURRENCY` | `4`     | Concurrent lifecycle sessions |
+| `BENCHKIT_SSH_SOAK_METRICS_MS`  | `100`   | Metrics window per session    |
+
+Configure keys, ports, and jump hosts in `~/.ssh/config`. The command builds,
+stages, tests, and cleans up automatically.
 
 ## License
 
