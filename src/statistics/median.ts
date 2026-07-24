@@ -1,3 +1,4 @@
+/** Numeric observation that may be absent or explicitly null. */
 export type NullableNumber = number | null | undefined
 
 export default function median(values: readonly number[]): number {

@@ -1,5 +1,6 @@
 import { finiteMedian, type NullableNumber } from './median.js'
 
+/** Read-only metric-name map whose observations may be absent or non-finite. */
 export type MetricRecord = Readonly<Record<string, NullableNumber>>
 
 export function metricMedians(values: readonly MetricRecord[]): Record<string, number | null> {

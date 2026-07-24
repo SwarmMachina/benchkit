@@ -1,38 +1,80 @@
 import type { V8Profile } from '../profiling/v8-prof-parser.js'
 
+/** Parsed and copied CPU profile associated with one benchmark row. */
 export interface CpuProfile {
+  /** Benchmark case identifier. */
   test: string
+
+  /** Run identifier. */
   run: number
+
+  /** Framework or implementation identifier. */
   fw: string
+
+  /** Parsed V8 profile when a processed report exists. */
   profile?: V8Profile
+
+  /** Copied processed-profile path relative to the artifact root. */
   processedPath?: string
+
+  /** Copied V8 log path relative to the artifact root. */
   logPath?: string
 }
 
+/** Optional CPU profile quality and regression thresholds. */
 export interface CpuGuardConfig {
+  /** Requires a profile for every expected benchmark key. */
   profileRequired?: boolean
+
+  /** Minimum acceptable profiler tick count. */
   minTotalTicks?: number
+
+  /** Maximum acceptable GC share as a percentage of all ticks. */
   maxGcPct?: number
+
+  /** Maximum acceptable unaccounted share as a percentage of all ticks. */
   maxUnaccountedPct?: number
 }
 
+/** CPU profiles, policy, and expected keys supplied to `cpuGuard`. */
 export interface CpuGuardParams {
+  /** Collected CPU profiles. */
   cpuProfiles: CpuProfile[]
+
+  /** Guard policy, or `undefined` to disable the guard. */
   guard: CpuGuardConfig | undefined
+
+  /** Required `test:run:framework` keys when profiles are mandatory. */
   expectedKeys: string[]
 }
 
+/** Normalized CPU profile row rendered in regression reports. */
 export interface CpuGuardRow {
+  /** `test:run:framework` profile key. */
   key: string
+
+  /** Total profiler ticks, or `null` when unavailable. */
   ticks: number | null
+
+  /** JavaScript tick share, or `null` when unavailable. */
   jsPct: number | null
+
+  /** Native C++ tick share, or `null` when unavailable. */
   cppPct: number | null
+
+  /** Garbage-collection tick share, or `null` when unavailable. */
   gcPct: number | null
+
+  /** Unaccounted tick share, or `null` when unavailable. */
   unaccountedPct: number | null
 }
 
+/** CPU guard failures and normalized report rows. */
 export interface CpuGuardResult {
+  /** Human-readable policy violations. */
   failures: string[]
+
+  /** Parsed profile rows considered by the guard. */
   rows: CpuGuardRow[]
 }
 

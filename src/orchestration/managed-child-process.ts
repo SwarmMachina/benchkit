@@ -1,28 +1,72 @@
 import { execFile, type ChildProcess } from 'node:child_process'
 import { TimeoutError } from '../control/errors.js'
 
+/** Exit code and terminating signal observed from a child process. */
 export interface ChildExitResult {
+  /** Numeric process exit code, or `null` when terminated by a signal. */
   code: number | null
+
+  /** Terminating signal, or `null` after a normal exit. */
   signal: NodeJS.Signals | null
 }
 
+/** Outcome of a bounded graceful-then-forced child termination. */
 export interface TerminateChildProcessResult {
+  /** Final child exit state. */
   exit: ChildExitResult
+
+  /** Whether termination advanced to the force phase. */
   escalated: boolean
+
+  /** Whether the child had already exited before termination began. */
   alreadyExited: boolean
 }
 
 type ExecuteFile = typeof execFile
 type KillProcess = (pid: number, signal: NodeJS.Signals) => true
 
+/** Signals, deadlines, and injectable platform operations for child termination. */
 export interface TerminateChildProcessOptions {
+  /**
+   * First signal sent to the child, or `false` to skip graceful termination.
+   * @default `'SIGTERM'`
+   */
   gracefulSignal?: NodeJS.Signals | false
+
+  /**
+   * Signal used after the graceful deadline.
+   * @default `'SIGKILL'`
+   */
   forceSignal?: NodeJS.Signals
+
+  /**
+   * Graceful-exit deadline in milliseconds.
+   * @default `5_000`
+   */
   graceMs?: number
+
+  /**
+   * Forced-exit deadline in milliseconds.
+   * @default `1_000`
+   */
   killMs?: number
+
+  /**
+   * Terminates the process group or Windows process tree.
+   * @default `false`
+   */
   killTree?: boolean
+
+  /**
+   * Platform used to select tree-termination behavior.
+   * @default `process.platform`
+   */
   platform?: NodeJS.Platform
+
+  /** Injectable `execFile` implementation used for Windows `taskkill`. */
   executeFile?: ExecuteFile
+
+  /** Injectable process-group kill implementation. */
   killProcess?: KillProcess
 }
 

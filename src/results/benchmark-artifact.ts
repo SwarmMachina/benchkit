@@ -5,30 +5,62 @@ import { snapshotEnvironment, type EnvironmentSnapshot } from '../control/enviro
 
 export const BENCHMARK_ARTIFACT_SCHEMA_VERSION = 'benchmark-run/v1' as const
 
+/** Versioned, serializable benchmark artifact. */
 export interface BenchmarkArtifact<
   Parameters extends Record<string, unknown> = Record<string, unknown>,
   Results = unknown,
   Metadata extends Record<string, unknown> = Record<string, unknown>
 > {
+  /** Artifact schema identifier. */
   schemaVersion: typeof BENCHMARK_ARTIFACT_SCHEMA_VERSION
+
+  /** Stable benchmark suite identifier. */
   suite: string
+
+  /** ISO-8601 artifact creation time. */
   generatedAt: string
+
+  /** Host, runtime, CPU, and memory environment snapshot. */
   environment: EnvironmentSnapshot
+
+  /** Effective benchmark parameters. */
   parameters: Parameters
+
+  /** Suite-specific benchmark results. */
   results: Results
+
+  /** Optional suite-specific metadata. */
   metadata?: Metadata
 }
 
+/** Inputs used to create a versioned benchmark artifact. */
 export interface CreateBenchmarkArtifactOptions<
   Parameters extends Record<string, unknown>,
   Results,
   Metadata extends Record<string, unknown>
 > {
+  /** Stable non-empty benchmark suite identifier. */
   suite: string
+
+  /** Effective benchmark parameters. */
   parameters: Parameters
+
+  /** Suite-specific benchmark results. */
   results: Results
+
+  /** Optional suite-specific metadata. */
   metadata?: Metadata
+
+  /**
+   * ISO-8601 artifact creation time.
+   * @default The current time.
+   */
   generatedAt?: string
+
+  /**
+   * Host and runtime environment.
+   * @default A fresh `snapshotEnvironment()` result.
+   */
   environment?: EnvironmentSnapshot
 }
 

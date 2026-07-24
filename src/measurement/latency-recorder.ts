@@ -1,14 +1,30 @@
 const MAX_LAT_SAMPLES = 100_000
 
+/** Summary produced by the legacy bounded-sample latency recorder. */
 export interface LatencySummary {
+  /** Arithmetic mean in milliseconds, or `null` when `messages` is zero. */
   avgMs: number | null
+
+  /** 95th percentile of retained samples in milliseconds, or `null` when empty. */
   p95Ms: number | null
+
+  /** 97.5th percentile of retained samples in milliseconds, or `null` when empty. */
   p97_5Ms: number | null
+
+  /** 99th percentile of retained samples in milliseconds, or `null` when empty. */
   p99Ms: number | null
 }
 
+/**
+ * Legacy latency recorder that retains at most the latest 100,000 samples.
+ *
+ * Prefer `BoundedLatencyRecorder` when snapshots must be merged across workers.
+ */
 export interface LatencyRecorder {
+  /** Records one latency observation in milliseconds. */
   record(ms: number): void
+
+  /** Returns latency statistics using `messages` as the average denominator. */
   summary(messages: number): LatencySummary
 }
 

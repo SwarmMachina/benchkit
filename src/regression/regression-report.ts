@@ -2,10 +2,21 @@ import { fmt, mdTable } from '../reporting/step-summary.js'
 import type { CpuGuardResult } from './cpu-guard.js'
 import type { MetricGuardResult } from './metric-guard.js'
 
+/** Inputs rendered into one Markdown regression report. */
 export interface RegressionReportInput {
+  /** Suite name used in the report heading. */
   suite: string
+
+  /** Optional absolute metric guard result. */
   metric?: MetricGuardResult
+
+  /** Optional CPU profile guard result. */
   cpu?: CpuGuardResult
+
+  /**
+   * Additional caller-defined failures.
+   * @default `[]`
+   */
   failures?: readonly string[]
 }
 

@@ -1,29 +1,57 @@
+/** Optional inclusive lower and upper bounds for one metric. */
 export interface MetricBound {
+  /** Inclusive minimum accepted value. */
   min?: number
+
+  /** Inclusive maximum accepted value. */
   max?: number
 }
 
+/** Guard configuration for one named benchmark case. */
 export interface MetricGuardBaselineTest {
+  /** Bounds keyed by metric name. */
   guards?: Record<string, MetricBound>
 }
 
+/** Cases, measurements, and bounds supplied to `metricGuard`. */
 export interface MetricGuardParams {
+  /** Ordered benchmark case names to validate. */
   cases: string[]
+
+  /** Actual finite measurements keyed by case and metric. */
   results: Record<string, Record<string, number>>
+
+  /** Expected metric bounds keyed by case. */
   baselineTests: Record<string, MetricGuardBaselineTest>
 }
 
+/** One evaluated absolute metric bound. */
 export interface MetricGuardRow {
+  /** Benchmark case name. */
   case: string
+
+  /** Metric name. */
   metric: string
+
+  /** Actual value, or `undefined` when missing. */
   value: number | undefined
+
+  /** Inclusive minimum, or `null` when not configured. */
   min: number | null
+
+  /** Inclusive maximum, or `null` when not configured. */
   max: number | null
+
+  /** Evaluation status. */
   status: 'ok' | 'FAIL'
 }
 
+/** Absolute metric guard failures and evaluated rows. */
 export interface MetricGuardResult {
+  /** Human-readable missing-data and bound violations. */
   failures: string[]
+
+  /** Evaluated metric rows. */
   rows: MetricGuardRow[]
 }
 

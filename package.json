@@ -290,7 +290,8 @@
   "scripts": {
     "bench:http1-load": "pnpm build && node scripts/benchmark-http1-load.js",
     "build": "node scripts/clean-dist.js && tsc",
-    "check": "swm-standards check && tsc --noEmit",
+    "check": "swm-standards check && tsc --noEmit && node scripts/check-public-type-docs.js",
+    "check:type-docs": "node scripts/check-public-type-docs.js",
     "check:types": "tsc --noEmit",
     "fix": "swm-standards fix",
     "test": "node scripts/clean-dist.js && tsc && tsc -p tsconfig.package-test.json && node --experimental-strip-types --test tests/unit/*.test.ts tests/integration/*.test.ts",

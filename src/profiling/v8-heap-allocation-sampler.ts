@@ -1,31 +1,60 @@
 import { Session } from 'node:inspector'
 
+/** Configuration for V8 inspector heap-allocation sampling. */
 export interface V8HeapAllocationSamplerOptions {
+  /**
+   * Mean byte interval between allocation samples.
+   * @default `32_768`
+   */
   samplingIntervalBytes?: number
+
+  /**
+   * Includes objects collected before sampling stops.
+   * @default `true`
+   */
   includeCollectedObjects?: boolean
 }
 
+/** Allocation call-tree node returned by the V8 HeapProfiler domain. */
 export interface V8AllocationProfileNode {
+  /** Sampled bytes attributed directly to this node. */
   selfSize: number
+
+  /** Child allocation call-tree nodes. */
   children: V8AllocationProfileNode[]
+
+  /** Additional V8 protocol fields preserved without interpretation. */
   [key: string]: unknown
 }
 
+/** Allocation sampling profile returned by V8 HeapProfiler. */
 export interface V8AllocationProfile {
+  /** Root allocation call-tree node. */
   head: V8AllocationProfileNode
+
+  /** Optional raw sample records supplied by V8. */
   samples?: unknown[]
+
+  /** Additional V8 protocol fields preserved without interpretation. */
   [key: string]: unknown
 }
 
+/** Profile and sampled allocation total for one interval. */
 export interface V8HeapAllocationResult {
+  /** Sum of `selfSize` across the allocation call tree. */
   sampledAllocationBytes: number
+
+  /** Raw V8 allocation sampling profile. */
   profile: V8AllocationProfile
 }
 
+/** Allocation result paired with the measured operation return value. */
 export interface V8HeapAllocationRunResult<Value> extends V8HeapAllocationResult {
+  /** Value returned by the measured operation. */
   value: Value
 }
 
+/** Explicit-lifecycle wrapper around the V8 inspector allocation sampler. */
 export class V8HeapAllocationSampler {
   readonly #options: Required<V8HeapAllocationSamplerOptions>
   readonly #session = new Session()
@@ -49,6 +78,7 @@ export class V8HeapAllocationSampler {
     this.#options = { samplingIntervalBytes, includeCollectedObjects }
   }
 
+  /** Starts allocation sampling for the current process. */
   async start(): Promise<void> {
     if (this.#disposed) {
       throw new Error('V8 heap allocation sampler is disposed')
@@ -81,6 +111,7 @@ export class V8HeapAllocationSampler {
     }
   }
 
+  /** Stops sampling and returns the profile and sampled byte total. */
   async stop(): Promise<V8HeapAllocationResult> {
     if (!this.#running) {
       throw new Error('V8 heap allocation sampler is not running')
@@ -96,6 +127,7 @@ export class V8HeapAllocationSampler {
     }
   }
 
+  /** Stops active sampling, disables HeapProfiler, and disconnects the inspector session. */
   async dispose(): Promise<void> {
     if (this.#disposed) {
       return

@@ -1,8 +1,17 @@
 import { ProtocolError } from './errors.js'
 
+/** Callbacks and frame limit for an incremental NDJSON decoder. */
 export interface NdjsonDecoderOptions {
+  /** Receives each successfully parsed JSON value. */
   onMessage: (message: unknown) => void
+
+  /** Receives the first terminal decoding error. */
   onError: (error: ProtocolError) => void
+
+  /**
+   * Maximum UTF-8 bytes in one line-delimited frame.
+   * @default `1_048_576`
+   */
   maxLineBytes?: number
 }
 
@@ -10,6 +19,7 @@ export function encodeNdjson(message: unknown): string {
   return `${JSON.stringify(message)}\n`
 }
 
+/** Incremental, size-bounded decoder for newline-delimited JSON streams. */
 export class NdjsonDecoder {
   readonly #onMessage: NdjsonDecoderOptions['onMessage']
   readonly #onError: NdjsonDecoderOptions['onError']
@@ -23,6 +33,11 @@ export class NdjsonDecoder {
     this.#maxLineBytes = maxLineBytes
   }
 
+  /**
+   * Appends a UTF-8 chunk and synchronously emits every complete frame.
+   *
+   * Calls after a decoding failure are ignored.
+   */
   push(chunk: string | Buffer): void {
     if (this.#failed) {
       return
@@ -58,6 +73,11 @@ export class NdjsonDecoder {
     }
   }
 
+  /**
+   * Completes the stream.
+   *
+   * A non-whitespace partial frame is reported as a protocol error.
+   */
   end(): void {
     if (!this.#failed && this.#buffered.trim() !== '') {
       this.#fail(new ProtocolError('NDJSON control stream ended with a partial frame'))

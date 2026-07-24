@@ -2,8 +2,15 @@ import net from 'node:net'
 import { BenchkitError } from '../control/errors.js'
 import { isPort } from '../control/value-guards.js'
 
+/** Host and optional inclusive range used for TCP port selection. */
 export interface GetFreePortOptions {
+  /**
+   * Local interface on which availability is tested.
+   * @default `'127.0.0.1'`
+   */
   host?: string
+
+  /** Inclusive `[minimum, maximum]` port range. */
   range?: readonly [number, number]
 }
 

@@ -1,16 +1,33 @@
 import { ConfigurationError } from './errors.js'
 import { isPort } from './value-guards.js'
 
+/** Inclusive `[minimum, maximum]` TCP port range. */
 export type PortRange = readonly [number, number]
 
+/** Independent deadlines used by target-provider lifecycle operations. */
 export interface TimeoutOptions {
+  /** Control transport connection deadline in milliseconds. */
   connectMs: number
+
+  /** Target agent readiness deadline in milliseconds. */
   agentStartupMs: number
+
+  /** Target-process IPC readiness deadline in milliseconds. */
   targetReadyMs: number
+
+  /** Individual control command deadline in milliseconds. */
   commandMs: number
+
+  /** Overall target network reachability deadline in milliseconds. */
   reachabilityMs: number
+
+  /** Delay between reachability attempts in milliseconds. */
   reachabilityRetryMs: number
+
+  /** Graceful target shutdown deadline in milliseconds. */
   shutdownGraceMs: number
+
+  /** Forced target shutdown deadline in milliseconds. */
   killMs: number
 }
 

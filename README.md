@@ -195,6 +195,10 @@ Legacy function-level imports such as `@swarmmachina/benchkit/metrics` and
 `@swarmmachina/benchkit/get-free-port` remain explicit package exports. The
 physical `dist/` layout is not public API.
 
+Every published type, interface, class, property, and method is documented in
+the generated declarations. `pnpm run check:type-docs` resolves the public
+surface from `package.json#exports` and rejects undocumented type contracts.
+
 ## Runtime design
 
 - No runtime dependencies.

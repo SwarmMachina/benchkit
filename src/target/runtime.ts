@@ -3,17 +3,40 @@ import { isPort } from '../control/value-guards.js'
 import Metrics, { type MetricsStartOptions, type MetricsSummary } from '../measurement/metrics.js'
 import { isRuntimeCommand, type RuntimeCommand, type RuntimeReady, type RuntimeResponse } from './protocol.js'
 
+/** Payload sent when a target announces IPC readiness. */
 export type TargetReadyPayload = RuntimeReady['payload']
 
+/** Target-process control runtime configuration. */
 export interface TargetRuntimeOptions {
+  /**
+   * Enables target-side process and event-loop measurement commands.
+   * @default `true`
+   */
   metrics?: boolean
+
+  /**
+   * Exits the process after a shutdown command or termination signal.
+   * @default `true`
+   */
   exitOnSignal?: boolean
 }
 
+/** Target-side lifecycle integration attached to Node.js IPC and signals. */
 export interface TargetRuntime {
+  /**
+   * Registers a LIFO shutdown hook and returns an unregister callback.
+   *
+   * Registration after shutdown begins throws.
+   */
   registerShutdown(hook: () => void | Promise<void>): () => void
+
+  /** Announces the target port and bind address to the control agent. */
   ready(payload: TargetReadyPayload): void
+
+  /** Runs registered shutdown hooks once and returns the shared completion promise. */
   shutdown(): Promise<void>
+
+  /** Removes IPC and signal listeners without running shutdown hooks. */
   dispose(): void
 }
 

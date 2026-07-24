@@ -3,33 +3,72 @@ import type { TargetState } from './state-machine.js'
 import { isRecord } from './value-guards.js'
 import { PROTOCOL_VERSION } from './version.js'
 
+/** Correlated runner-to-agent control request names. */
 export type RequestType = 'target:start' | 'metrics:start' | 'metrics:stop' | 'target:stop'
+
+/** Unsolicited agent-to-runner control event names. */
 export type EventType = 'agent:ready' | 'agent:error' | 'target:exit'
 
+/** Versioned request sent from a benchmark runner to the target agent. */
 export interface ControlRequest {
+  /** Control protocol version. */
   version: typeof PROTOCOL_VERSION
+
+  /** Non-empty correlation identifier, limited to 128 characters. */
   id: string
+
+  /** Requested target lifecycle operation. */
   type: RequestType
+
+  /** Operation-specific request data. */
   payload: unknown
 }
 
+/** Correlated response sent by the target agent. */
 export interface ControlResponse {
+  /** Control protocol version. */
   version: typeof PROTOCOL_VERSION
+
+  /** Correlation identifier copied from the request. */
   id: string
+
+  /** Request type being answered. */
   type: RequestType
+
+  /** Whether the operation succeeded. */
   status: 'ok' | 'error'
+
+  /** Target lifecycle state after handling the request. */
   state?: TargetState
+
+  /** Operation-specific success data. */
   payload?: unknown
+
+  /** Serialized failure data when `status` is `'error'`. */
   error?: SerializedError
 }
 
+/** Unsolicited lifecycle event emitted by the target agent. */
 export interface ControlEvent {
+  /** Control protocol version. */
   version: typeof PROTOCOL_VERSION
+
+  /** Always `null` because events do not correlate to requests. */
   id: null
+
+  /** Event name. */
   type: EventType
+
+  /** Whether the event reports normal state or failure. */
   status: 'ok' | 'error'
+
+  /** Target lifecycle state associated with the event. */
   state?: TargetState
+
+  /** Event-specific data. */
   payload?: unknown
+
+  /** Serialized failure data when `status` is `'error'`. */
   error?: SerializedError
 }
 

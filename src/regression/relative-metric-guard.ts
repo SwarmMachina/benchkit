@@ -1,32 +1,72 @@
+/** Direction in which a larger or smaller candidate value is preferable. */
 export type MetricDirection = 'higher' | 'lower'
 
+/** Candidate/reference comparison and tolerated regression policy for one metric. */
 export interface RelativeMetricRule {
+  /** Stable metric name used in failures and reports. */
   name: string
+
+  /** Candidate measurement. */
   candidate: number
+
+  /** Reference measurement. */
   reference: number
+
+  /** Direction considered better. */
   direction: MetricDirection
+
+  /** Maximum tolerated relative regression as a non-negative percentage. */
   maxRegressionPct: number
+
+  /**
+   * Additional absolute tolerance applied after the relative boundary.
+   * @default `0`
+   */
   absoluteSlack?: number
 }
 
+/** Relative metric rules supplied to `relativeMetricGuard`. */
 export interface RelativeMetricGuardParams {
+  /** Ordered rules to evaluate. */
   metrics: readonly RelativeMetricRule[]
 }
 
+/** One normalized relative regression evaluation. */
 export interface RelativeMetricGuardRow {
+  /** Stable metric name. */
   name: string
+
+  /** Candidate measurement. */
   candidate: number
+
+  /** Reference measurement. */
   reference: number
+
+  /** Direction considered better. */
   direction: MetricDirection
+
+  /** Configured tolerated relative regression percentage. */
   maxRegressionPct: number
+
+  /** Effective non-negative absolute tolerance. */
   absoluteSlack: number
+
+  /** Computed inclusive pass boundary, or `null` for invalid inputs. */
   boundary: number | null
+
+  /** Evaluation status. */
   status: 'pass' | 'fail'
 }
 
+/** Aggregate status, failures, and rows for relative metric guards. */
 export interface RelativeMetricGuardResult {
+  /** `fail` when at least one rule failed. */
   status: 'pass' | 'fail'
+
+  /** Human-readable validation and regression failures. */
   failures: string[]
+
+  /** One normalized row for every supplied rule. */
   rows: RelativeMetricGuardRow[]
 }
 

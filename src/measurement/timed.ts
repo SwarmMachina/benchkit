@@ -1,7 +1,11 @@
 import { performance } from 'node:perf_hooks'
 
+/** Result and elapsed wall time returned by `timed`. */
 export interface TimedResult<T> {
+  /** Value returned by the measured operation. */
   result: T
+
+  /** Elapsed wall time in milliseconds. */
   ms: number
 }
 

@@ -1,7 +1,22 @@
+/**
+ * Mutates parsed output for one recognized CLI argument.
+ *
+ * Return `false` when the argument does not consume the following token.
+ */
 export type ArgHandler<T extends object> = (out: T, value: string | undefined) => boolean | void
 
+/** Parsing mode and starting position for the small CLI argument parser. */
 export interface ParseArgsOptions {
+  /**
+   * Rejects unknown arguments and missing consumed values.
+   * @default `false`
+   */
   strict?: boolean
+
+  /**
+   * First argument index to inspect.
+   * @default `0` in strict mode, otherwise `2`.
+   */
   offset?: number
 }
 

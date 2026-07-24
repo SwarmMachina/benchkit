@@ -1,13 +1,29 @@
 import os from 'node:os'
 
+/** Host and Node.js runtime metadata captured with benchmark artifacts. */
 export interface EnvironmentSnapshot {
+  /** Node.js version including the leading `v`. */
   nodeVersion: string
+
+  /** Operating-system platform reported by `process.platform`. */
   platform: NodeJS.Platform
+
+  /** CPU architecture reported by `process.arch`. */
   arch: string
+
+  /** Operating-system hostname. */
   hostname: string
+
+  /** Operating-system release identifier. */
   osRelease: string
+
+  /** Model of the first logical CPU, or `null` when unavailable. */
   cpuModel: string | null
+
+  /** Number of logical CPUs visible to the process. */
   cpuCount: number
+
+  /** Total system memory in bytes. */
   totalMemoryBytes: number
 }
 

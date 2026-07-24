@@ -1,28 +1,66 @@
+/** One parsed row from a V8 statistical profiler section. */
 export interface V8ProfileRow {
+  /** Samples attributed to this entry. */
   ticks: number
+
+  /** Percentage of all profiler ticks. */
   totalPct: number
+
+  /** Percentage excluding shared-library ticks, or `null` when omitted. */
   nonlibPct: number | null
+
+  /** Normalized symbol, source location, or category name. */
   name: string
 }
 
+/** Aggregated entry from the V8 profiler summary section. */
 export interface V8ProfileSummaryEntry {
+  /** Samples attributed to this category. */
   ticks: number
+
+  /** Percentage of all profiler ticks. */
   totalPct: number
+
+  /** Percentage excluding shared-library ticks, or `null` when omitted. */
   nonlibPct: number | null
 }
 
+/** Structured representation of processed `node --prof` output. */
 export interface V8Profile {
+  /** Total profiler ticks, or `null` when unavailable. */
   totalTicks: number | null
+
+  /** Ticks V8 could not attribute, or `null` when unavailable. */
   unaccountedTicks: number | null
+
+  /** Ticks excluded by V8 processing, or `null` when unavailable. */
   excludedTicks: number | null
+
+  /** Summary categories keyed by normalized lower-case names. */
   summary: Record<string, V8ProfileSummaryEntry>
+
+  /** Highest-ranked JavaScript entries. */
   topJavaScript: V8ProfileRow[]
+
+  /** Highest-ranked native C++ entries. */
   topNative: V8ProfileRow[]
+
+  /** Highest-ranked shared-library entries. */
   topSharedLibraries: V8ProfileRow[]
 }
 
+/** Normalization and output limits for processed V8 profiler text. */
 export interface V8ProfileOptions {
+  /**
+   * Working-directory prefix removed from parsed source locations.
+   * @default `''`
+   */
   cwd?: string
+
+  /**
+   * Maximum rows retained from each detailed section.
+   * @default `10`
+   */
   topN?: number
 }
 

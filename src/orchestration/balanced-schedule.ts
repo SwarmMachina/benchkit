@@ -1,12 +1,33 @@
+/** Options for deterministic alternating candidate/reference run order. */
 export interface BalancedScheduleOptions<Candidate extends string = string, Reference extends string = string> {
+  /** Number of rounds to generate. */
   runs: number
+
+  /**
+   * Candidate label.
+   * @default `'candidate'`
+   */
   candidate?: Candidate
+
+  /**
+   * Reference label.
+   * @default `'reference'`
+   */
   reference?: Reference
+
+  /**
+   * Requires an even round count for exact AB/BA balance.
+   * @default `true`
+   */
   strictBalance?: boolean
 }
 
+/** One round in a deterministic paired benchmark schedule. */
 export interface BalancedScheduleEntry<Label extends string = string> {
+  /** One-based round number. */
   round: number
+
+  /** Candidate/reference execution order for this round. */
   order: readonly [Label, Label]
 }
 

@@ -1,15 +1,30 @@
+/** Availability state reported by Linux `perf stat`. */
 export type PerfCounterStatus = 'counted' | 'not-supported' | 'not-counted'
 
+/** One counter parsed from `perf stat -x,` output. */
 export interface PerfStatCounter {
+  /** Perf event name. */
   event: string
+
+  /** Counted value, or `null` when unavailable. */
   value: number | null
+
+  /** Unit emitted by perf, or `null` when omitted. */
   unit: string | null
+
+  /** Whether the kernel counted the event. */
   status: PerfCounterStatus
+
+  /** Counter runtime emitted by perf, or `null` when omitted. */
   runtime: number | null
+
+  /** Percentage of requested runtime during which the counter ran. */
   runningPct: number | null
 }
 
+/** Perf counter annotated with a value normalized per logical operation. */
 export interface NormalizedPerfStatCounter extends PerfStatCounter {
+  /** Counter value divided by operation count, or `null` when unavailable. */
   perOperation: number | null
 }
 

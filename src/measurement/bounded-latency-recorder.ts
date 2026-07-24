@@ -1,50 +1,126 @@
+/** Configuration accepted when creating a bounded latency recorder. */
 export interface BoundedLatencyRecorderOptions {
+  /**
+   * Smallest non-zero latency retained by the histogram, in milliseconds.
+   * @default `0.001`
+   */
   lowestDiscernibleMs?: number
+
+  /**
+   * Largest latency retained by the histogram, in milliseconds.
+   * @default `60_000`
+   */
   highestTrackableMs?: number
+
+  /**
+   * Maximum relative value error expressed as a fraction.
+   * @default `0.01`
+   */
   relativeAccuracy?: number
 }
 
+/** Normalized immutable configuration of a bounded latency recorder. */
 export interface BoundedLatencyRecorderConfig {
+  /** Smallest retained non-zero latency, in milliseconds. */
   lowestDiscernibleMs: number
+
+  /** Largest retained latency, in milliseconds. */
   highestTrackableMs: number
+
+  /** Maximum relative value error expressed as a fraction. */
   relativeAccuracy: number
 }
 
+/** Serializable and mergeable bounded latency histogram state. */
 export interface BoundedLatencySnapshot extends BoundedLatencyRecorderConfig {
+  /** Snapshot schema version. */
   version: 1
+
+  /** Observation counts indexed by logarithmic bucket. */
   counts: number[]
+
+  /** Number of exact zero-millisecond observations. */
   zeroCount: number
+
+  /** Number of accepted observations, including exact zero values. */
   count: number
+
+  /** Number of rejected `NaN` or infinite observations. */
   nonFinite: number
+
+  /** Number of rejected observations below the configured range. */
   belowRange: number
+
+  /** Number of rejected observations above the configured range. */
   aboveRange: number
 }
 
+/** Statistical summary derived from a bounded latency histogram. */
 export interface BoundedLatencySummary {
+  /** Number of accepted observations. */
   count: number
+
+  /** Total rejected observations. */
   dropped: number
+
+  /** Rejected observations outside the configured numeric range. */
   outOfRange: number
+
+  /** Rejected `NaN` or infinite observations. */
   nonFinite: number
+
+  /** Rejected observations below the configured range. */
   belowRange: number
+
+  /** Rejected observations above the configured range. */
   aboveRange: number
+
+  /** Approximate arithmetic mean in milliseconds, or `null` when empty. */
   averageMs: number | null
+
+  /** Approximate nearest-rank 50th percentile in milliseconds, or `null` when empty. */
   p50Ms: number | null
+
+  /** Approximate nearest-rank 95th percentile in milliseconds, or `null` when empty. */
   p95Ms: number | null
+
+  /** Approximate nearest-rank 97.5th percentile in milliseconds, or `null` when empty. */
   p97_5Ms: number | null
+
+  /** Approximate nearest-rank 99th percentile in milliseconds, or `null` when empty. */
   p99Ms: number | null
+
+  /** Algorithm and configured error bounds for the reported values. */
   accuracy: {
+    /** Histogram and quantile algorithm identifier. */
     algorithm: 'logarithmic-histogram-nearest-rank'
+
+    /** Maximum relative value error, expressed as a percentage. */
     maxRelativeErrorPct: number
+
+    /** Smallest retained non-zero latency, in milliseconds. */
     lowestDiscernibleMs: number
+
+    /** Largest retained latency, in milliseconds. */
     highestTrackableMs: number
   }
 }
 
+/** Mutable bounded latency recorder with mergeable snapshots. */
 export interface BoundedLatencyRecorder {
+  /** Records one latency observation in milliseconds. */
   record(ms: number): void
+
+  /** Merges a snapshot created with identical histogram configuration. */
   merge(snapshot: BoundedLatencySnapshot): void
+
+  /** Returns a detached serializable copy of the current histogram state. */
   snapshot(): BoundedLatencySnapshot
+
+  /** Summarizes the current histogram without resetting it. */
   summary(): BoundedLatencySummary
+
+  /** Removes all observations while retaining allocated histogram storage. */
   reset(): void
 }
 

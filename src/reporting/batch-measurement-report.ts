@@ -2,8 +2,15 @@ import type { ScenarioMeasurement } from '../measurement/measure-scenario.js'
 import { bytesToMiB } from '../units/bytes-to-mib.js'
 import { mdTable } from './step-summary.js'
 
+/** Presentation options for scenario measurement Markdown. */
 export interface RenderBatchMeasurementsOptions {
+  /** Optional parameter line rendered above the table. */
   parameters?: string
+
+  /**
+   * Includes heap and RSS peak columns.
+   * @default `true` when any measurement contains process-memory samples.
+   */
   includeMemoryPeaks?: boolean
 }
 

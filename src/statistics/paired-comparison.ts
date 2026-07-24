@@ -1,27 +1,54 @@
 import median from './median.js'
 import { percentDelta } from './percent-delta.js'
 
+/** One matched candidate/reference observation. */
 export interface ComparisonPair {
+  /** Candidate measurement. */
   candidate: number
+
+  /** Reference measurement used as the percentage-delta denominator. */
   reference: number
 }
 
+/** Options controlling how paired wins are counted. */
 export interface PairedComparisonOptions {
+  /**
+   * Metric direction considered a win for the candidate.
+   * @default `'higher'`
+   */
   direction?: 'higher' | 'lower'
 }
 
+/** Median-of-halves Tukey hinges for a finite distribution. */
 export interface TukeyHinges {
+  /** Explicit quartile algorithm identifier. */
   algorithm: 'tukey-hinges'
+
+  /** Median of the lower half. */
   q1: number
+
+  /** Median of the upper half. */
   q3: number
 }
 
+/** Aggregate statistics for matched candidate/reference observations. */
 export interface PairedComparisonResult {
+  /** Median candidate measurement. */
   medianCandidate: number
+
+  /** Median reference measurement. */
   medianReference: number
+
+  /** Signed `(candidate - reference) / reference * 100` value for every pair. */
   pairedDeltasPct: number[]
+
+  /** Median of the signed paired percentage deltas. */
   medianPairedDeltaPct: number
+
+  /** Number of pairs won according to the configured direction. */
   winningPairs: number
+
+  /** Tukey hinges calculated over paired percentage deltas. */
   iqr: TukeyHinges
 }
 

@@ -1,32 +1,83 @@
 import { setTimeout as delay } from 'node:timers/promises'
 
+/** Garbage-collection stabilization options used by memory-growth measurements. */
 export interface ForceGcOptions {
+  /**
+   * Collection and event-loop settle cycles.
+   * @default `4`
+   */
   cycles?: number
+
+  /**
+   * Delay after each collection cycle, in milliseconds.
+   * @default `10`
+   */
   settleMs?: number
+
+  /**
+   * Collection implementation.
+   * @default `globalThis.gc`
+   */
   collectGarbage?: () => void | Promise<void>
 }
 
+/** Start, end, and retained process-memory values for one category. */
 export interface MemoryGrowthMetric {
+  /** Bytes observed after warmup and initial garbage collection. */
   startBytes: number
+
+  /** Bytes observed after measured work and final garbage collection. */
   endBytes: number
+
+  /** `endBytes - startBytes`; negative values are preserved. */
   deltaBytes: number
 }
 
+/** Retained process-memory result for a completed growth measurement. */
 export interface MemoryGrowthSummary {
+  /** Number of unmeasured warmup iterations. */
   warmup: number
+
+  /** Number of measured iterations. */
   iterations: number
+
+  /** Resident set size values. */
   rss: MemoryGrowthMetric
+
+  /** V8 heap capacity values. */
   heapTotal: MemoryGrowthMetric
+
+  /** Used V8 heap values. */
   heapUsed: MemoryGrowthMetric
+
+  /** V8 external memory values. */
   external: MemoryGrowthMetric
+
+  /** `ArrayBuffer` memory values. */
   arrayBuffers: MemoryGrowthMetric
 }
 
+/** Configuration for retained process-memory growth measurement. */
 export interface MeasureMemoryGrowthOptions {
+  /** Number of measured invocations. */
   iterations: number
+
+  /** Work executed for each warmup and measured iteration. */
   run: (iteration: number) => void | Promise<void>
+
+  /**
+   * Number of unmeasured invocations before the starting snapshot.
+   * @default `0`
+   */
   warmup?: number
+
+  /** Garbage-collection stabilization options. */
   gc?: ForceGcOptions
+
+  /**
+   * Process-memory snapshot provider.
+   * @default `process.memoryUsage`
+   */
   memoryUsage?: () => NodeJS.MemoryUsage
 }
 

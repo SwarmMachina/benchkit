@@ -9,8 +9,12 @@ interface LogCandidate {
   size: number
 }
 
+/** Paths produced after converting a V8 log with `node --prof-process`. */
 export interface ProcessedV8Profile {
+  /** Path to the original isolate V8 log. */
   logPath: string
+
+  /** Path to the processed text report. */
   processedPath: string
 }
 

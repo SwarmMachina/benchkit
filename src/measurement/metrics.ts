@@ -2,36 +2,77 @@ import os from 'node:os'
 import { monitorEventLoopDelay, performance } from 'node:perf_hooks'
 import { bytesToMiB } from '../units/bytes-to-mib.js'
 
+/** Options used when starting process and event-loop metrics collection. */
 export interface MetricsStartOptions {
+  /**
+   * Process-memory and host-load sampling interval in milliseconds.
+   * Values below 50 are clamped to 50.
+   * @default `250`
+   */
   sampleMs?: number
 }
 
+/** Event-loop delay percentiles and maximum in milliseconds. */
 export interface EventLoopDelayMetrics {
+  /** 50th percentile delay, or `null` when unavailable. */
   p50: number | null
+
+  /** 90th percentile delay, or `null` when unavailable. */
   p90: number | null
+
+  /** 99th percentile delay, or `null` when unavailable. */
   p99: number | null
+
+  /** Maximum observed delay, or `null` when unavailable. */
   max: number | null
 }
 
+/** Peak process-memory values in mebibytes. */
 export interface MemoryMetrics {
+  /** Peak resident set size. */
   rssPeak: number
+
+  /** Peak used V8 heap. */
   heapUsedPeak: number
+
+  /** Peak V8 external memory. */
   externalPeak: number
+
+  /** Peak `ArrayBuffer` memory. */
   arrayBuffersPeak: number
 }
 
+/** Process, event-loop, memory, and host-load metrics for one interval. */
 export interface MetricsSummary {
+  /** Measurement wall time in milliseconds. */
   wallMs: number
+
+  /** Process user and system CPU time in milliseconds. */
   cpuMs: number
+
+  /** Process CPU usage where 100% represents one fully occupied core. */
   cpuCorePct: number
+
+  /** Process CPU usage divided by the host logical CPU count. */
   cpuHostPct: number
+
+  /** Event-loop utilization expressed as a percentage. */
   eluPct: number
+
+  /** Event-loop delay distribution in milliseconds. */
   eventLoopDelayMs: EventLoopDelayMetrics
+
+  /** Peak process-memory values in mebibytes. */
   memMB: MemoryMetrics
+
+  /** Mean 1, 5, and 15-minute host load averages across samples. */
   loadAvg: number[]
+
+  /** Peak 1, 5, and 15-minute host load averages across samples. */
   loadPeak: number[]
 }
 
+/** Stateful collector for process, event-loop, memory, and host-load metrics. */
 export default class Metrics {
   #running = false
 
@@ -52,6 +93,11 @@ export default class Metrics {
   #loadPeak: [number, number, number] = [0, 0, 0]
   #samples = 0
 
+  /**
+   * Starts collection unless it is already running.
+   *
+   * Starting a running collector is a no-op.
+   */
   start({ sampleMs }: MetricsStartOptions = {}): void {
     if (this.#running) {
       return
@@ -79,6 +125,11 @@ export default class Metrics {
     this.#timer.unref?.()
   }
 
+  /**
+   * Stops collection and returns a summary.
+   *
+   * Returns `null` when the collector is not running.
+   */
   stop(): MetricsSummary | null {
     if (!this.#running) {
       return null

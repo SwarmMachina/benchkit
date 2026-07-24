@@ -5,8 +5,13 @@ import type { BenchmarkRun, ProfiledBenchmarkResult, ProfiledBenchmarkRow } from
 import type { CpuProfile } from '../regression/cpu-guard.js'
 import parseV8Profile from './v8-prof-parser.js'
 
+/** Profile-capable benchmark row accepted by `copyCpuProfiles`. */
 export type BenchRow = ProfiledBenchmarkRow
+
+/** Profile-capable benchmark run accepted by `copyCpuProfiles`. */
 export type BenchRun = BenchmarkRun<ProfiledBenchmarkRow>
+
+/** Profile-capable benchmark result accepted by `copyCpuProfiles`. */
 export type Bench = ProfiledBenchmarkResult
 
 export default async function copyCpuProfiles(
