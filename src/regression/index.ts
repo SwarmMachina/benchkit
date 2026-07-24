@@ -18,3 +18,11 @@ export type {
 } from './metric-guard.js'
 export { renderRegressionMarkdown } from './regression-report.js'
 export type { RegressionReportInput } from './regression-report.js'
+export { relativeMetricGuard } from './relative-metric-guard.js'
+export type {
+  MetricDirection,
+  RelativeMetricGuardParams,
+  RelativeMetricGuardResult,
+  RelativeMetricGuardRow,
+  RelativeMetricRule
+} from './relative-metric-guard.js'

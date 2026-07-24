@@ -1,0 +1,75 @@
+import net from 'node:net'
+import { BenchkitError } from '../control/errors.js'
+import { isPort } from '../control/value-guards.js'
+
+export interface GetFreePortOptions {
+  host?: string
+  range?: readonly [number, number]
+}
+
+async function listenOnce(host: string, port: number): Promise<number> {
+  const server = net.createServer()
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject)
+      server.listen({ host, port, exclusive: true }, () => resolve())
+    })
+
+    const address = server.address()
+
+    if (!address || typeof address === 'string') {
+      throw new BenchkitError('Port selector returned no TCP address', 'PORT_SELECTION_FAILED')
+    }
+
+    return address.port
+  } finally {
+    if (server.listening) {
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error)
+          } else {
+            resolve()
+          }
+        })
+      })
+    }
+  }
+}
+
+export default async function getFreePort({ host = '127.0.0.1', range }: GetFreePortOptions = {}): Promise<number> {
+  if (typeof host !== 'string' || host.length === 0 || /[\0\r\n]/u.test(host)) {
+    throw new TypeError('host must be a non-empty string without control characters')
+  }
+
+  if (range === undefined) {
+    return listenOnce(host, 0)
+  }
+
+  if (!Array.isArray(range) || range.length !== 2 || !isPort(range[0]) || !isPort(range[1]) || range[0] > range[1]) {
+    throw new RangeError('range must contain two ordered valid ports')
+  }
+
+  const [minimum, maximum] = range
+  const count = maximum - minimum + 1
+  const offset = Math.floor(Math.random() * count)
+
+  let lastError: unknown
+
+  for (let index = 0; index < count; index++) {
+    const port = minimum + ((offset + index) % count)
+
+    try {
+      return await listenOnce(host, port)
+    } catch (error) {
+      lastError = error
+    }
+  }
+
+  throw new BenchkitError(`No free port in range ${minimum}-${maximum}`, 'PORT_RANGE_EXHAUSTED', undefined, {
+    cause: lastError
+  })
+}
+
+export { getFreePort }

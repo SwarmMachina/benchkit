@@ -1,11 +1,32 @@
+import delayDefault from '@swarmmachina/benchkit/delay'
+import getFreePortDefault, { type GetFreePortOptions } from '@swarmmachina/benchkit/get-free-port'
 import MetricsDefault from '@swarmmachina/benchkit/metrics'
 import metricGuardDefault, { type MetricGuardParams, type MetricGuardResult } from '@swarmmachina/benchkit/metric-guard'
-import { measureBatch, Metrics } from '@swarmmachina/benchkit/measurement'
+import {
+  createBoundedLatencyRecorder,
+  forceGc,
+  measureBatch,
+  measureMemoryGrowth,
+  measureScenario,
+  Metrics,
+  ProcessMemorySampler
+} from '@swarmmachina/benchkit/measurement'
+import {
+  balancedSchedule,
+  delay,
+  getFreePort,
+  terminateChildProcess,
+  waitForChildExit
+} from '@swarmmachina/benchkit/orchestration'
+import { normalizePerfCounters, parsePerfStat, sampleV8HeapAllocations } from '@swarmmachina/benchkit/profiling'
 import { renderRegressionMarkdown } from '@swarmmachina/benchkit/regression'
-import type { BenchmarkResult } from '@swarmmachina/benchkit/results'
-import { finiteMedian, quantileLinear } from '@swarmmachina/benchkit/statistics'
+import { createBenchmarkArtifact, type BenchmarkResult } from '@swarmmachina/benchkit/results'
+import { renderBatchMeasurementsMarkdown } from '@swarmmachina/benchkit/reporting'
+import { finiteMedian, pairedComparison, quantileLinear, tukeyHinges } from '@swarmmachina/benchkit/statistics'
 import timed from '@swarmmachina/benchkit/timed'
 import { bytesToMiB } from '@swarmmachina/benchkit/units'
+import { createTargetRuntime } from '@swarmmachina/benchkit/target'
+import { BENCHKIT_VERSION, PROTOCOL_VERSION, createTargetProvider, type TargetSession } from '@swarmmachina/benchkit'
 
 const result: BenchmarkResult = {
   runs: [{ run: 1, rows: [{ fw: 'core' }] }]
@@ -16,16 +37,47 @@ const params: MetricGuardParams = {
   baselineTests: {}
 }
 const guard: MetricGuardResult = metricGuardDefault(params)
+const provider = createTargetProvider({ mode: 'local' })
+const runtime = createTargetRuntime()
+const session = undefined as TargetSession | undefined
+const portOptions: GetFreePortOptions = { host: '127.0.0.1' }
 
 void [
   Metrics,
   MetricsDefault,
   bytesToMiB,
+  delay,
+  delayDefault,
   finiteMedian,
+  getFreePort,
+  getFreePortDefault,
   guard,
   measureBatch,
   quantileLinear,
   renderRegressionMarkdown,
   result,
-  timed
+  timed,
+  BENCHKIT_VERSION,
+  PROTOCOL_VERSION,
+  provider,
+  portOptions,
+  runtime,
+  session,
+  balancedSchedule({ runs: 2 }),
+  createBoundedLatencyRecorder(),
+  createBenchmarkArtifact({ suite: 'types', parameters: {}, results: [] }),
+  forceGc,
+  measureMemoryGrowth,
+  measureScenario,
+  new ProcessMemorySampler(),
+  normalizePerfCounters(parsePerfStat('1,,cycles'), 1),
+  pairedComparison([
+    { candidate: 1, reference: 2 },
+    { candidate: 2, reference: 1 }
+  ]),
+  sampleV8HeapAllocations,
+  renderBatchMeasurementsMarkdown,
+  terminateChildProcess,
+  waitForChildExit,
+  tukeyHinges([1, 2])
 ]

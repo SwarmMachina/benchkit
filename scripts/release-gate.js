@@ -4,10 +4,13 @@ import fs from 'node:fs'
 const root = new URL('../', import.meta.url)
 const packageJson = JSON.parse(fs.readFileSync(new URL('package.json', root), 'utf8'))
 
-for (const name of ['check', 'test', 'build']) {
-  const result = spawnSync(packageJson.scripts[name], {
+for (const name of ['check', 'test', 'test:packed-types']) {
+  if (typeof packageJson.scripts[name] !== 'string') {
+    throw new TypeError(`missing package script: ${name}`)
+  }
+
+  const result = spawnSync('pnpm', ['run', name], {
     cwd: root,
-    shell: true,
     stdio: 'inherit'
   })
 

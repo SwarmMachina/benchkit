@@ -1,0 +1,118 @@
+export type MetricDirection = 'higher' | 'lower'
+
+export interface RelativeMetricRule {
+  name: string
+  candidate: number
+  reference: number
+  direction: MetricDirection
+  maxRegressionPct: number
+  absoluteSlack?: number
+}
+
+export interface RelativeMetricGuardParams {
+  metrics: readonly RelativeMetricRule[]
+}
+
+export interface RelativeMetricGuardRow {
+  name: string
+  candidate: number
+  reference: number
+  direction: MetricDirection
+  maxRegressionPct: number
+  absoluteSlack: number
+  boundary: number | null
+  status: 'pass' | 'fail'
+}
+
+export interface RelativeMetricGuardResult {
+  status: 'pass' | 'fail'
+  failures: string[]
+  rows: RelativeMetricGuardRow[]
+}
+
+export function relativeMetricGuard({ metrics }: RelativeMetricGuardParams): RelativeMetricGuardResult {
+  if (!Array.isArray(metrics)) {
+    throw new TypeError('metrics must be an array')
+  }
+
+  const failures: string[] = []
+  const rows = metrics.map((metric, index): RelativeMetricGuardRow => {
+    validateRule(metric, index)
+
+    const absoluteSlack = metric.absoluteSlack ?? 0
+    const valuesAreFinite = Number.isFinite(metric.candidate) && Number.isFinite(metric.reference)
+    const computedBoundary = valuesAreFinite
+      ? metric.direction === 'higher'
+        ? metric.reference - (metric.reference * metric.maxRegressionPct) / 100 - absoluteSlack
+        : metric.reference + (metric.reference * metric.maxRegressionPct) / 100 + absoluteSlack
+      : null
+    const boundary = Number.isFinite(computedBoundary) ? computedBoundary : null
+
+    let status: RelativeMetricGuardRow['status'] = 'pass'
+
+    if (!Number.isFinite(metric.candidate)) {
+      failures.push(`${metric.name}: candidate must be finite`)
+      status = 'fail'
+    }
+
+    if (!Number.isFinite(metric.reference)) {
+      failures.push(`${metric.name}: reference must be finite`)
+      status = 'fail'
+    }
+
+    if (valuesAreFinite && boundary === null) {
+      failures.push(`${metric.name}: computed boundary must be finite`)
+      status = 'fail'
+    }
+
+    if (
+      boundary !== null &&
+      ((metric.direction === 'higher' && metric.candidate < boundary) ||
+        (metric.direction === 'lower' && metric.candidate > boundary))
+    ) {
+      const relation = metric.direction === 'higher' ? 'below' : 'above'
+
+      failures.push(`${metric.name}: candidate ${metric.candidate} is ${relation} boundary ${boundary}`)
+      status = 'fail'
+    }
+
+    return {
+      name: metric.name,
+      candidate: metric.candidate,
+      reference: metric.reference,
+      direction: metric.direction,
+      maxRegressionPct: metric.maxRegressionPct,
+      absoluteSlack,
+      boundary,
+      status
+    }
+  })
+
+  return {
+    status: failures.length ? 'fail' : 'pass',
+    failures,
+    rows
+  }
+}
+
+function validateRule(metric: RelativeMetricRule, index: number): void {
+  if (!metric || typeof metric !== 'object') {
+    throw new TypeError(`metrics[${index}] must be an object`)
+  }
+
+  if (typeof metric.name !== 'string' || !metric.name) {
+    throw new TypeError(`metrics[${index}].name must be a non-empty string`)
+  }
+
+  if (metric.direction !== 'higher' && metric.direction !== 'lower') {
+    throw new TypeError(`${metric.name}.direction must be "higher" or "lower"`)
+  }
+
+  if (!Number.isFinite(metric.maxRegressionPct) || metric.maxRegressionPct < 0) {
+    throw new RangeError(`${metric.name}.maxRegressionPct must be a non-negative finite number`)
+  }
+
+  if (metric.absoluteSlack !== undefined && (!Number.isFinite(metric.absoluteSlack) || metric.absoluteSlack < 0)) {
+    throw new RangeError(`${metric.name}.absoluteSlack must be a non-negative finite number`)
+  }
+}

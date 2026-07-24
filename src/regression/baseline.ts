@@ -1,3 +1,5 @@
+import { isRecord } from '../control/value-guards.js'
+
 export const BASELINE_SCHEMA_VERSION = 'regression-ci-baseline/v1' as const
 
 export interface BaselineBenchmark {
@@ -100,10 +102,6 @@ export function validateBaseline(json: unknown): BaselineValidationResult {
 
 export function isBaseline(json: unknown): json is Baseline {
   return validateBaseline(json).ok
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function requireRecord(record: Record<string, unknown>, key: string, errors: string[]): Record<string, unknown> | null {

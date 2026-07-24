@@ -1,6 +1,6 @@
 {
   "name": "@swarmmachina/benchkit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Zero-dependency TypeScript helpers for SwarmMachina benchmarks",
   "keywords": [
     "benchmark",
@@ -13,6 +13,9 @@
   "author": "SwarmMachina Team",
   "license": "MPL-2.0",
   "type": "module",
+  "bin": {
+    "benchkit-agent": "./dist/agent/cli.js"
+  },
   "packageManager": "pnpm@11.15.1",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -29,6 +32,21 @@
       "types": "./dist/measurement/index.d.ts",
       "import": "./dist/measurement/index.js",
       "default": "./dist/measurement/index.js"
+    },
+    "./control": {
+      "types": "./dist/control/index.d.ts",
+      "import": "./dist/control/index.js",
+      "default": "./dist/control/index.js"
+    },
+    "./target": {
+      "types": "./dist/target/index.d.ts",
+      "import": "./dist/target/index.js",
+      "default": "./dist/target/index.js"
+    },
+    "./target-provider": {
+      "types": "./dist/target-provider/index.d.ts",
+      "import": "./dist/target-provider/index.js",
+      "default": "./dist/target-provider/index.js"
     },
     "./orchestration": {
       "types": "./dist/orchestration/index.d.ts",
@@ -70,15 +88,35 @@
       "import": "./dist/regression/baseline.js",
       "default": "./dist/regression/baseline.js"
     },
+    "./balanced-schedule": {
+      "types": "./dist/orchestration/balanced-schedule.d.ts",
+      "import": "./dist/orchestration/balanced-schedule.js",
+      "default": "./dist/orchestration/balanced-schedule.js"
+    },
     "./benchmark-result": {
       "types": "./dist/results/benchmark-result.d.ts",
       "import": "./dist/results/benchmark-result.js",
       "default": "./dist/results/benchmark-result.js"
     },
+    "./benchmark-artifact": {
+      "types": "./dist/results/benchmark-artifact.d.ts",
+      "import": "./dist/results/benchmark-artifact.js",
+      "default": "./dist/results/benchmark-artifact.js"
+    },
+    "./batch-measurement-report": {
+      "types": "./dist/reporting/batch-measurement-report.d.ts",
+      "import": "./dist/reporting/batch-measurement-report.js",
+      "default": "./dist/reporting/batch-measurement-report.js"
+    },
     "./bytes-to-mib": {
       "types": "./dist/units/bytes-to-mib.d.ts",
       "import": "./dist/units/bytes-to-mib.js",
       "default": "./dist/units/bytes-to-mib.js"
+    },
+    "./bounded-latency-recorder": {
+      "types": "./dist/measurement/bounded-latency-recorder.d.ts",
+      "import": "./dist/measurement/bounded-latency-recorder.js",
+      "default": "./dist/measurement/bounded-latency-recorder.js"
     },
     "./copy-cpu-profiles": {
       "types": "./dist/profiling/copy-cpu-profiles.d.ts",
@@ -90,6 +128,11 @@
       "import": "./dist/regression/cpu-guard.js",
       "default": "./dist/regression/cpu-guard.js"
     },
+    "./delay": {
+      "types": "./dist/orchestration/delay.d.ts",
+      "import": "./dist/orchestration/delay.js",
+      "default": "./dist/orchestration/delay.js"
+    },
     "./ensure-dir": {
       "types": "./dist/orchestration/ensure-dir.d.ts",
       "import": "./dist/orchestration/ensure-dir.js",
@@ -100,6 +143,11 @@
       "import": "./dist/reporting/format.js",
       "default": "./dist/reporting/format.js"
     },
+    "./get-free-port": {
+      "types": "./dist/orchestration/get-free-port.d.ts",
+      "import": "./dist/orchestration/get-free-port.js",
+      "default": "./dist/orchestration/get-free-port.js"
+    },
     "./latency-recorder": {
       "types": "./dist/measurement/latency-recorder.d.ts",
       "import": "./dist/measurement/latency-recorder.js",
@@ -109,6 +157,16 @@
       "types": "./dist/measurement/measure-batch.d.ts",
       "import": "./dist/measurement/measure-batch.js",
       "default": "./dist/measurement/measure-batch.js"
+    },
+    "./measure-scenario": {
+      "types": "./dist/measurement/measure-scenario.d.ts",
+      "import": "./dist/measurement/measure-scenario.js",
+      "default": "./dist/measurement/measure-scenario.js"
+    },
+    "./memory-growth": {
+      "types": "./dist/measurement/memory-growth.d.ts",
+      "import": "./dist/measurement/memory-growth.js",
+      "default": "./dist/measurement/memory-growth.js"
     },
     "./median": {
       "types": "./dist/statistics/median.d.ts",
@@ -125,10 +183,35 @@
       "import": "./dist/measurement/metrics.js",
       "default": "./dist/measurement/metrics.js"
     },
+    "./managed-child-process": {
+      "types": "./dist/orchestration/managed-child-process.d.ts",
+      "import": "./dist/orchestration/managed-child-process.js",
+      "default": "./dist/orchestration/managed-child-process.js"
+    },
     "./parse-args": {
       "types": "./dist/orchestration/parse-args.d.ts",
       "import": "./dist/orchestration/parse-args.js",
       "default": "./dist/orchestration/parse-args.js"
+    },
+    "./paired-comparison": {
+      "types": "./dist/statistics/paired-comparison.d.ts",
+      "import": "./dist/statistics/paired-comparison.js",
+      "default": "./dist/statistics/paired-comparison.js"
+    },
+    "./perf-stat": {
+      "types": "./dist/profiling/perf-stat.d.ts",
+      "import": "./dist/profiling/perf-stat.js",
+      "default": "./dist/profiling/perf-stat.js"
+    },
+    "./process-memory": {
+      "types": "./dist/measurement/process-memory.d.ts",
+      "import": "./dist/measurement/process-memory.js",
+      "default": "./dist/measurement/process-memory.js"
+    },
+    "./relative-metric-guard": {
+      "types": "./dist/regression/relative-metric-guard.d.ts",
+      "import": "./dist/regression/relative-metric-guard.js",
+      "default": "./dist/regression/relative-metric-guard.js"
     },
     "./regression-report": {
       "types": "./dist/regression/regression-report.d.ts",
@@ -170,6 +253,11 @@
       "import": "./dist/profiling/v8-prof-run.js",
       "default": "./dist/profiling/v8-prof-run.js"
     },
+    "./v8-heap-allocation-sampler": {
+      "types": "./dist/profiling/v8-heap-allocation-sampler.d.ts",
+      "import": "./dist/profiling/v8-heap-allocation-sampler.js",
+      "default": "./dist/profiling/v8-heap-allocation-sampler.js"
+    },
     "./wait-for-message": {
       "types": "./dist/orchestration/wait-for-message.d.ts",
       "import": "./dist/orchestration/wait-for-message.js",
@@ -178,6 +266,7 @@
   },
   "files": [
     "dist/",
+    "docs/",
     "README.md",
     "LICENSE"
   ],
@@ -199,7 +288,9 @@
     "check": "swm-standards check && tsc --noEmit",
     "check:types": "tsc --noEmit",
     "fix": "swm-standards fix",
-    "test": "node scripts/clean-dist.js && tsc && tsc -p tsconfig.package-test.json && node --experimental-strip-types --test tests/unit/*.test.ts",
+    "test": "node scripts/clean-dist.js && tsc && tsc -p tsconfig.package-test.json && node --experimental-strip-types --test tests/unit/*.test.ts tests/integration/*.test.ts",
+    "test:integration": "node scripts/clean-dist.js && tsc && node --experimental-strip-types --test tests/integration/*.test.ts",
+    "test:packed-types": "pnpm build && node scripts/test-packed-types.js",
     "release:verify-tag": "node scripts/verify-release.js",
     "release:verify-published": "node scripts/verify-published.js",
     "release:publish": "node scripts/publish-release.js",
