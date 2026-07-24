@@ -40,6 +40,37 @@ interface PhaseResult {
   processMemory: ProcessMemorySummary
 }
 
+/**
+ * Runs an HTTP/1.1 load scenario and resolves with bounded measurements.
+ *
+ * Workers and connections are created once. An optional warmup phase drains
+ * outstanding responses and resets measurements without discarding socket or
+ * JIT state. The target should run in a separate process or host when
+ * generator CPU and memory must exclude target work.
+ * @param options Target, concurrency, scheduling, and measurement options.
+ * @returns Throughput, latency, status, error, transport, CPU, ELU, and memory
+ * measurements.
+ * @throws {TypeError} If an option has an invalid type or the URL is unsupported.
+ * @throws {RangeError} If a numeric option is outside its supported range.
+ * @example Closed-loop saturation:
+ * ```ts
+ * const result = await runHttp1Load({
+ *   url: 'http://127.0.0.1:3000/',
+ *   connections: 100,
+ *   pipelining: 10,
+ *   durationMs: 10_000
+ * })
+ * ```
+ * @example Fixed aggregate rate:
+ * ```ts
+ * const result = await runHttp1Load({
+ *   url: 'http://127.0.0.1:3000/',
+ *   connections: 100,
+ *   rate: 50_000,
+ *   durationMs: 10_000
+ * })
+ * ```
+ */
 export default async function runHttp1Load(options: RunHttp1LoadOptions): Promise<Http1LoadResult> {
   const normalized = normalizeOptions(options)
 

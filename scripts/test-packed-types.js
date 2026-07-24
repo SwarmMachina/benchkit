@@ -62,6 +62,13 @@ try {
     stdio: 'inherit'
   })
 
+  const installedPackage = path.join(consumer, 'node_modules', '@swarmmachina', 'benchkit')
+  const http1Declarations = fs.readFileSync(path.join(installedPackage, 'dist/load/http1/types.d.ts'), 'utf8')
+
+  assert.match(http1Declarations, /Options accepted by.*runHttp1Load/s)
+  assert.match(http1Declarations, /@default `10_000`/)
+  assert.match(http1Declarations, /Fixed-rate arrivals dropped because no pipeline capacity was available/)
+
   const shared = {
     strict: true,
     noEmit: true,
