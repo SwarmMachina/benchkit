@@ -1,5 +1,5 @@
 import type { SerializedError } from '../control/errors.js'
-import { isRecord } from '../control/value-guards.js'
+import { isRecord } from '../validation/predicates.js'
 
 export const RUNTIME_COMMAND_TYPES = ['benchkit:metrics:start', 'benchkit:metrics:stop', 'benchkit:shutdown'] as const
 

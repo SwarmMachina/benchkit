@@ -1,3 +1,4 @@
+import { requireNonEmptyString, requirePositiveInteger } from '../validation/value-parsers.js'
 import measureBatch, { type BatchMeasurement, type MeasureBatchOptions } from './measure-batch.js'
 
 /** Batch measurement options with stable benchmark scenario dimensions. */
@@ -36,23 +37,14 @@ export default async function measureScenario({
   pipelining = 1,
   ...batch
 }: MeasureScenarioOptions): Promise<ScenarioMeasurement> {
-  if (typeof name !== 'string' || name.trim() === '') {
-    throw new TypeError('scenario name must be a non-empty string')
-  }
-
-  validatePositiveInteger(connections, 'connections')
-  validatePositiveInteger(pipelining, 'pipelining')
+  requireNonEmptyString(name, 'scenario name')
+  requirePositiveInteger(connections, 'connections')
+  requirePositiveInteger(pipelining, 'pipelining')
 
   return {
     name,
     connections,
     pipelining,
     ...(await measureBatch(batch))
-  }
-}
-
-function validatePositiveInteger(value: number, name: string): void {
-  if (!Number.isSafeInteger(value) || value <= 0) {
-    throw new TypeError(`${name} must be a positive safe integer`)
   }
 }

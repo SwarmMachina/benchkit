@@ -1,7 +1,7 @@
 import { ConfigurationError, VersionMismatchError } from '../control/errors.js'
-import { isRecord } from '../control/value-guards.js'
 import { BENCHKIT_VERSION, PROTOCOL_VERSION } from '../control/version.js'
 import type { AgentConfiguration } from '../target-provider/types.js'
+import { isPositiveFiniteNumber, isRecord } from '../validation/predicates.js'
 
 const MAX_CONFIG_BYTES = 128 * 1024
 
@@ -41,7 +41,7 @@ export function decodeAgentConfiguration(encoded: string): AgentConfiguration {
   }
 
   for (const key of ['diagnosticsMaxBytes', 'commandMs', 'shutdownGraceMs', 'killMs'] as const) {
-    if (!Number.isFinite(value[key]) || (value[key] as number) <= 0) {
+    if (!isPositiveFiniteNumber(value[key])) {
       throw new ConfigurationError(`Agent configuration ${key} must be positive`)
     }
   }

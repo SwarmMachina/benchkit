@@ -1,6 +1,6 @@
 import { ProtocolError, VersionMismatchError, type SerializedError } from './errors.js'
 import type { TargetState } from './state-machine.js'
-import { isRecord } from './value-guards.js'
+import { isRecord } from '../validation/predicates.js'
 import { PROTOCOL_VERSION } from './version.js'
 
 /** Correlated runner-to-agent control request names. */

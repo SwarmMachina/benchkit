@@ -1,4 +1,4 @@
-import { isRecord } from '../control/value-guards.js'
+import { isRecord } from '../validation/predicates.js'
 
 export const BASELINE_SCHEMA_VERSION = 'regression-ci-baseline/v1' as const
 

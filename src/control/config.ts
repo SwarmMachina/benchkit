@@ -1,5 +1,6 @@
 import { ConfigurationError } from './errors.js'
 import { isPort } from './value-guards.js'
+import { isPositiveFiniteNumber } from '../validation/predicates.js'
 
 /** Inclusive `[minimum, maximum]` TCP port range. */
 export type PortRange = readonly [number, number]
@@ -89,7 +90,7 @@ export function resolveTimeouts(options: Partial<TimeoutOptions> | undefined): T
   const resolved = { ...DEFAULT_TIMEOUTS, ...options }
 
   for (const [name, value] of Object.entries(resolved)) {
-    if (!Number.isFinite(value) || value <= 0) {
+    if (!isPositiveFiniteNumber(value)) {
       throw new ConfigurationError(`timeouts.${name} must be a positive number`)
     }
   }

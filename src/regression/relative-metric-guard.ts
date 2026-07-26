@@ -1,3 +1,5 @@
+import { isNonNegativeFiniteNumber } from '../validation/predicates.js'
+
 /** Direction in which a larger or smaller candidate value is preferable. */
 export type MetricDirection = 'higher' | 'lower'
 
@@ -148,11 +150,11 @@ function validateRule(metric: RelativeMetricRule, index: number): void {
     throw new TypeError(`${metric.name}.direction must be "higher" or "lower"`)
   }
 
-  if (!Number.isFinite(metric.maxRegressionPct) || metric.maxRegressionPct < 0) {
+  if (!isNonNegativeFiniteNumber(metric.maxRegressionPct)) {
     throw new RangeError(`${metric.name}.maxRegressionPct must be a non-negative finite number`)
   }
 
-  if (metric.absoluteSlack !== undefined && (!Number.isFinite(metric.absoluteSlack) || metric.absoluteSlack < 0)) {
+  if (metric.absoluteSlack !== undefined && !isNonNegativeFiniteNumber(metric.absoluteSlack)) {
     throw new RangeError(`${metric.name}.absoluteSlack must be a non-negative finite number`)
   }
 }

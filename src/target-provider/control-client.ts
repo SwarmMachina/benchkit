@@ -10,7 +10,7 @@ import {
 } from '../control/errors.js'
 import { NdjsonDecoder, encodeNdjson } from '../control/ndjson.js'
 import { parseResponse, type ControlEvent, type ControlResponse, type RequestType } from '../control/protocol.js'
-import { isRecord } from '../control/value-guards.js'
+import { isRecord } from '../validation/predicates.js'
 import { BENCHKIT_VERSION, PROTOCOL_VERSION } from '../control/version.js'
 import { terminateChildProcess, waitForChildExit } from '../orchestration/managed-child-process.js'
 

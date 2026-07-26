@@ -1,4 +1,9 @@
 import { setTimeout as delay } from 'node:timers/promises'
+import {
+  requireNonNegativeInteger,
+  requireNonNegativeNumber,
+  requirePositiveInteger
+} from '../validation/value-parsers.js'
 
 /** Garbage-collection stabilization options used by memory-growth measurements. */
 export interface ForceGcOptions {
@@ -90,13 +95,8 @@ export async function forceGc({
   settleMs = 10,
   collectGarbage = globalThis.gc
 }: ForceGcOptions = {}): Promise<void> {
-  if (!Number.isSafeInteger(cycles) || cycles <= 0) {
-    throw new TypeError('GC cycles must be a positive safe integer')
-  }
-
-  if (!Number.isFinite(settleMs) || settleMs < 0) {
-    throw new TypeError('GC settleMs must be a non-negative finite number')
-  }
+  requirePositiveInteger(cycles, 'GC cycles')
+  requireNonNegativeNumber(settleMs, 'GC settleMs')
 
   if (typeof collectGarbage !== 'function') {
     throw new Error('garbage collection requires node --expose-gc')
@@ -119,8 +119,8 @@ export async function measureMemoryGrowth({
   gc,
   memoryUsage = process.memoryUsage
 }: MeasureMemoryGrowthOptions): Promise<MemoryGrowthSummary> {
-  validateCount(iterations, 'iterations', false)
-  validateCount(warmup, 'warmup', true)
+  requirePositiveInteger(iterations, 'iterations')
+  requireNonNegativeInteger(warmup, 'warmup')
 
   if (typeof run !== 'function') {
     throw new TypeError('run must be a function')
@@ -155,10 +155,4 @@ export async function measureMemoryGrowth({
   ) as Pick<MemoryGrowthSummary, MemoryKey>
 
   return { warmup, iterations, ...metrics }
-}
-
-function validateCount(value: number, name: string, allowZero: boolean): void {
-  if (!Number.isSafeInteger(value) || value < (allowZero ? 0 : 1)) {
-    throw new TypeError(`${name} must be ${allowZero ? 'a non-negative' : 'a positive'} safe integer`)
-  }
 }

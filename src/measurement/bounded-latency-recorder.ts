@@ -1,3 +1,5 @@
+import { isNonNegativeSafeInteger, isPositiveFiniteNumber } from '../validation/predicates.js'
+
 /** Configuration accepted when creating a bounded latency recorder. */
 export interface BoundedLatencyRecorderOptions {
   /**
@@ -311,7 +313,7 @@ function validateConfig(options: BoundedLatencyRecorderOptions): BoundedLatencyR
     relativeAccuracy: options.relativeAccuracy ?? DEFAULT_RELATIVE_ACCURACY
   }
 
-  if (!Number.isFinite(config.lowestDiscernibleMs) || config.lowestDiscernibleMs <= 0) {
+  if (!isPositiveFiniteNumber(config.lowestDiscernibleMs)) {
     throw new RangeError('lowestDiscernibleMs must be a positive finite number')
   }
 
@@ -354,7 +356,7 @@ function validateSnapshot(
     ...snapshot.counts
   ]
 
-  if (counters.some((value) => !Number.isSafeInteger(value) || value < 0)) {
+  if (counters.some((value) => !isNonNegativeSafeInteger(value))) {
     throw new TypeError('snapshot counters must be non-negative safe integers')
   }
 

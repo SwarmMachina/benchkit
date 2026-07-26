@@ -1,3 +1,5 @@
+import { isPositiveFiniteNumber } from '../validation/predicates.js'
+
 /** Availability state reported by Linux `perf stat`. */
 export type PerfCounterStatus = 'counted' | 'not-supported' | 'not-counted'
 
@@ -73,7 +75,7 @@ export function normalizePerfCounters(
     throw new TypeError('counters must be an array')
   }
 
-  if (!Number.isFinite(operations) || operations <= 0) {
+  if (!isPositiveFiniteNumber(operations)) {
     throw new RangeError('operations must be a positive finite number')
   }
 

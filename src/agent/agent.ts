@@ -14,7 +14,7 @@ import { snapshotEnvironment } from '../control/environment.js'
 import { validateHost, validatePortRange } from '../control/config.js'
 import { parseRequest, type ControlEvent, type ControlRequest, type ControlResponse } from '../control/protocol.js'
 import { TargetStateMachine } from '../control/state-machine.js'
-import { isPort, isRecord, requireNulFreeStringArray, requireStringRecord } from '../control/value-guards.js'
+import { isPort, requireNulFreeStringArray, requireStringRecord } from '../control/value-guards.js'
 import { BENCHKIT_VERSION, PROTOCOL_VERSION } from '../control/version.js'
 import getFreePort from '../orchestration/get-free-port.js'
 import { terminateChildProcess, waitForChildExit } from '../orchestration/managed-child-process.js'
@@ -25,6 +25,7 @@ import type {
   TargetProfileOptions,
   TargetStartResponse
 } from '../target-provider/types.js'
+import { isPositiveFiniteNumber, isRecord } from '../validation/predicates.js'
 
 type WriteControl = (message: ControlResponse | ControlEvent) => Promise<void>
 
@@ -47,7 +48,7 @@ function validateStart(value: unknown): ResolvedTargetStart {
     throw new ConfigurationError('target entrypoint must be a non-empty path')
   }
 
-  if (!Number.isFinite(value.targetReadyTimeoutMs) || (value.targetReadyTimeoutMs as number) <= 0) {
+  if (!isPositiveFiniteNumber(value.targetReadyTimeoutMs)) {
     throw new ConfigurationError('targetReadyTimeoutMs must be positive')
   }
 

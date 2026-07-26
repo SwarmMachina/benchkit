@@ -1,8 +1,5 @@
+import { isRecord } from '../validation/predicates.js'
 import { ConfigurationError } from './errors.js'
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
-}
 
 export function isPort(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 65_535

@@ -1,5 +1,6 @@
 import { execFile, type ChildProcess } from 'node:child_process'
 import { TimeoutError } from '../control/errors.js'
+import { requireNonNegativeNumber, requirePositiveInteger, requirePositiveNumber } from '../validation/value-parsers.js'
 
 /** Exit code and terminating signal observed from a child process. */
 export interface ChildExitResult {
@@ -71,7 +72,7 @@ export interface TerminateChildProcessOptions {
 }
 
 export async function waitForChildExit(child: ChildProcess, timeoutMs: number): Promise<ChildExitResult | null> {
-  validateTimeout(timeoutMs, 'timeoutMs')
+  requireNonNegativeNumber(timeoutMs, 'timeoutMs')
   const exited = currentExit(child)
 
   if (exited) {
@@ -114,11 +115,8 @@ export async function terminateWindowsProcessTree(
   timeoutMs: number,
   execute: ExecuteFile = execFile
 ): Promise<void> {
-  if (!Number.isSafeInteger(pid) || pid <= 0) {
-    throw new TypeError('pid must be a positive safe integer')
-  }
-
-  validateTimeout(timeoutMs, 'timeoutMs', false)
+  requirePositiveInteger(pid, 'pid')
+  requirePositiveNumber(timeoutMs, 'timeoutMs')
 
   await new Promise<void>((resolve, reject) => {
     execute(
@@ -149,8 +147,8 @@ export async function terminateChildProcess(
     killProcess = process.kill
   }: TerminateChildProcessOptions = {}
 ): Promise<TerminateChildProcessResult> {
-  validateTimeout(graceMs, 'graceMs')
-  validateTimeout(killMs, 'killMs', false)
+  requireNonNegativeNumber(graceMs, 'graceMs')
+  requirePositiveNumber(killMs, 'killMs')
   const existing = currentExit(child)
 
   if (existing) {
@@ -216,12 +214,6 @@ function currentExit(child: ChildProcess): ChildExitResult | null {
   return {
     code: child.exitCode ?? null,
     signal: child.signalCode ?? null
-  }
-}
-
-function validateTimeout(value: number, name: string, allowZero = true): void {
-  if (!Number.isFinite(value) || value < (allowZero ? 0 : Number.MIN_VALUE)) {
-    throw new TypeError(`${name} must be a ${allowZero ? 'non-negative' : 'positive'} finite number`)
   }
 }
 

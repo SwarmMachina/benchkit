@@ -1,4 +1,5 @@
 import { performance } from 'node:perf_hooks'
+import { requirePositiveInteger } from '../validation/value-parsers.js'
 import { summarizeBoundedLatencySnapshot, type BoundedLatencySnapshot } from './bounded-latency-recorder.js'
 import { ProcessMemorySampler, type ProcessMemorySummary } from './process-memory.js'
 import { quantileNearestRank } from '../statistics/quantile.js'
@@ -103,9 +104,7 @@ export default async function measureBatch({
   before,
   memorySampleMs
 }: MeasureBatchOptions): Promise<BatchMeasurement> {
-  if (!Number.isSafeInteger(operations) || operations <= 0) {
-    throw new TypeError('operations must be a positive safe integer')
-  }
+  requirePositiveInteger(operations, 'operations')
 
   await before?.()
 

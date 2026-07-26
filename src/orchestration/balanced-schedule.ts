@@ -1,3 +1,5 @@
+import { isPositiveSafeInteger } from '../validation/predicates.js'
+
 /** Options for deterministic alternating candidate/reference run order. */
 export interface BalancedScheduleOptions<Candidate extends string = string, Reference extends string = string> {
   /** Number of rounds to generate. */
@@ -37,7 +39,7 @@ export function balancedSchedule<Candidate extends string = 'candidate', Referen
   reference = 'reference' as Reference,
   strictBalance = true
 }: BalancedScheduleOptions<Candidate, Reference>): BalancedScheduleEntry<Candidate | Reference>[] {
-  if (!Number.isSafeInteger(runs) || runs <= 0) {
+  if (!isPositiveSafeInteger(runs)) {
     throw new RangeError('runs must be a positive safe integer')
   }
 

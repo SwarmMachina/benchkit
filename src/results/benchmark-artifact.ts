@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { snapshotEnvironment, type EnvironmentSnapshot } from '../control/environment.js'
+import { isRecord } from '../validation/predicates.js'
+import { requireNonEmptyString } from '../validation/value-parsers.js'
 
 export const BENCHMARK_ARTIFACT_SCHEMA_VERSION = 'benchmark-run/v1' as const
 
@@ -76,9 +78,7 @@ export function createBenchmarkArtifact<
   generatedAt = new Date().toISOString(),
   environment = snapshotEnvironment()
 }: CreateBenchmarkArtifactOptions<Parameters, Results, Metadata>): BenchmarkArtifact<Parameters, Results, Metadata> {
-  if (typeof suite !== 'string' || suite.trim() === '') {
-    throw new TypeError('benchmark artifact suite must be a non-empty string')
-  }
+  requireNonEmptyString(suite, 'benchmark artifact suite')
 
   if (!isRecord(parameters)) {
     throw new TypeError('benchmark artifact parameters must be an object')
@@ -120,8 +120,4 @@ export async function writeBenchmarkArtifact(filePath: string, artifact: Benchma
   } finally {
     await fs.rm(temporary, { force: true })
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
 }

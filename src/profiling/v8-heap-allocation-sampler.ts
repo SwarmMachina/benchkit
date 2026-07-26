@@ -1,4 +1,5 @@
 import { Session } from 'node:inspector'
+import { isNonNegativeFiniteNumber, isPositiveSafeInteger } from '../validation/predicates.js'
 
 /** Configuration for V8 inspector heap-allocation sampling. */
 export interface V8HeapAllocationSamplerOptions {
@@ -67,7 +68,7 @@ export class V8HeapAllocationSampler {
     samplingIntervalBytes = 32 * 1024,
     includeCollectedObjects = true
   }: V8HeapAllocationSamplerOptions = {}) {
-    if (!Number.isSafeInteger(samplingIntervalBytes) || samplingIntervalBytes <= 0) {
+    if (!isPositiveSafeInteger(samplingIntervalBytes)) {
       throw new RangeError('samplingIntervalBytes must be a positive safe integer')
     }
 
@@ -220,7 +221,7 @@ export function sampledAllocationBytes(profile: V8AllocationProfile): number {
   while (pending.length) {
     const node = pending.pop()
 
-    if (!node || !Number.isFinite(node.selfSize) || node.selfSize < 0 || !Array.isArray(node.children)) {
+    if (!node || !isNonNegativeFiniteNumber(node.selfSize) || !Array.isArray(node.children)) {
       throw new TypeError('allocation profile contains an invalid node')
     }
 
