@@ -9,6 +9,12 @@ import {
   type Http1LoadTransportMetrics
 } from '@swarmmachina/benchkit/load/http1'
 import {
+  runWebSocketLoad,
+  type WebSocketLoadMode,
+  type WebSocketLoadResult,
+  type WebSocketLoadTransportMetrics
+} from '@swarmmachina/benchkit/load/websocket'
+import {
   BoundedLatencyRecorder,
   forceGc,
   measureBatch,
@@ -50,6 +56,9 @@ const portOptions: GetFreePortOptions = { host: '127.0.0.1' }
 const httpResult = undefined as Http1LoadResult | undefined
 const httpMode: Http1LoadMode = 'fixed-rate'
 const httpTransport = undefined as Http1LoadTransportMetrics | undefined
+const websocketResult = undefined as WebSocketLoadResult | undefined
+const websocketMode: WebSocketLoadMode = 'closed-loop'
+const websocketTransport = undefined as WebSocketLoadTransportMetrics | undefined
 
 void [
   Metrics,
@@ -64,6 +73,9 @@ void [
   httpResult,
   httpMode,
   httpTransport,
+  websocketResult,
+  websocketMode,
+  websocketTransport,
   measureBatch,
   quantileLinear,
   renderRegressionMarkdown,
@@ -90,6 +102,7 @@ void [
   sampleV8HeapAllocations,
   renderBatchMeasurementsMarkdown,
   runHttp1Load,
+  runWebSocketLoad,
   terminateChildProcess,
   waitForChildExit,
   tukeyHinges([1, 2])

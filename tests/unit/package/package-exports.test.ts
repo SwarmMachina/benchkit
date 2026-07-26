@@ -36,6 +36,7 @@ test('new benchmark primitives are available through explicit package exports', 
     ['@swarmmachina/benchkit/delay', ['default']],
     ['@swarmmachina/benchkit/get-free-port', ['default', 'getFreePort']],
     ['@swarmmachina/benchkit/load/http1', ['runHttp1Load']],
+    ['@swarmmachina/benchkit/load/websocket', ['runWebSocketLoad']],
     [
       '@swarmmachina/benchkit/managed-child-process',
       ['terminateChildProcess', 'terminateWindowsProcessTree', 'waitForChildExit']

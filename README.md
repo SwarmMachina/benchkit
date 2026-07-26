@@ -8,7 +8,7 @@
 Zero-dependency benchmark, load-generation, profiling, and regression tools for
 Node.js 22 and 24.
 
-`benchkit` provides a focused HTTP/1.1 load generator, bounded latency
+`benchkit` provides focused HTTP/1.1 and WebSocket load generators, bounded latency
 histograms, process and event-loop measurements, benchmark result contracts,
 regression guards, and local or SSH target orchestration. Runtime code is
 ESM-only and uses Node.js built-ins.
@@ -98,6 +98,59 @@ safely sustain HTTP/1.1 pipelining.
 The complete option and result contracts are documented in the published
 TypeScript declarations and appear directly in editor hover and completion.
 
+## WebSocket load generation
+
+`runWebSocketLoad()` uses the native WebSocket client shipped with Node.js 22
+and 24. It adds no `ws` runtime dependency. Persistent connections run in
+worker threads and support bounded closed-loop saturation, fixed aggregate
+rates, warmup, send-buffer backpressure, and generator CPU/ELU/memory metrics.
+
+The target must behave as an echo/request-response endpoint: every received
+application message completes the oldest in-flight send on that connection.
+Unsolicited application messages are reported as protocol errors.
+
+```ts
+import { runWebSocketLoad } from '@swarmmachina/benchkit/load/websocket'
+
+const result = await runWebSocketLoad({
+  url: 'ws://127.0.0.1:3000/echo',
+  message: '{"type":"ping"}',
+  connections: 100,
+  maxInFlight: 4,
+  workers: 4,
+  warmupMs: 2_000,
+  durationMs: 10_000
+})
+
+console.log({
+  messagesPerSecond: result.messages.averagePerSecond,
+  p95Ms: result.latencyMs.p95Ms,
+  p99Ms: result.latencyMs.p99Ms,
+  eluPct: result.loadGenerator.maxWorkerEluPct,
+  rssPeakBytes: result.loadGenerator.processMemory.rss.peakBytes,
+  dropped: result.transport.rateDropped,
+  errors: result.errors.total
+})
+```
+
+Set `rate` for fixed-rate scheduling. Arrivals are dropped rather than queued
+when `connections * maxInFlight` is exhausted or native `bufferedAmount`
+exceeds `maxBufferedBytes`.
+
+Run the included benchmark against an echo endpoint:
+
+```bash
+BENCHKIT_WS_URL=ws://127.0.0.1:3000/echo \
+BENCHKIT_WS_CONNECTIONS=100 \
+BENCHKIT_WS_MAX_IN_FLIGHT=4 \
+BENCHKIT_WS_DURATION_MS=10000 \
+pnpm bench:websocket-load
+```
+
+The command prints the effective connections, duration, in-flight limit,
+workers, message size, and optional rate together with throughput, p95/p99,
+ELU, CPU, RSS, backpressure, dropped arrivals, and errors.
+
 ## Measurement
 
 Use the package root for the common API or a domain subpath for a narrower
@@ -180,6 +233,7 @@ rejected before an SSH process is started.
 | ----------------- | ---------------------------------------------------------------- |
 | `measurement`     | Latency, throughput, ELU, memory, and scenario measurements      |
 | `load/http1`      | HTTP/1.1 load generation and generator-health metrics            |
+| `load/websocket`  | Native WebSocket load generation and generator-health metrics    |
 | `control`         | Versioned control protocol, state machine, and structured errors |
 | `target`          | Target-process runtime integration                               |
 | `target-provider` | Local and SSH target sessions                                    |

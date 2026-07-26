@@ -38,6 +38,11 @@
       "import": "./dist/load/http1/index.js",
       "default": "./dist/load/http1/index.js"
     },
+    "./load/websocket": {
+      "types": "./dist/load/websocket/index.d.ts",
+      "import": "./dist/load/websocket/index.js",
+      "default": "./dist/load/websocket/index.js"
+    },
     "./control": {
       "types": "./dist/control/index.d.ts",
       "import": "./dist/control/index.js",
@@ -289,6 +294,7 @@
   },
   "scripts": {
     "bench:http1-load": "pnpm build && node scripts/benchmark-http1-load.js",
+    "bench:websocket-load": "pnpm build && node scripts/benchmark-websocket-load.js",
     "build": "node scripts/clean-dist.js && tsc",
     "check": "swm-standards check && tsc --noEmit && node scripts/check-public-type-docs.js",
     "check:type-docs": "node scripts/check-public-type-docs.js",
