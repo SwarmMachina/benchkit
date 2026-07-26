@@ -1,3 +1,6 @@
+import { isPositiveFiniteNumber } from '../validation/predicates.js'
+import { ProcessMemoryPeakTracker } from './process-memory-peak-tracker.js'
+
 /** Options used when starting a process-memory sampler. */
 export interface ProcessMemorySamplerOptions {
   /**
@@ -40,17 +43,16 @@ export interface ProcessMemorySummary {
   arrayBuffers: ProcessMemoryMetric
 }
 
-type MemoryUsage = ReturnType<typeof process.memoryUsage>
 type MemoryKey = keyof ProcessMemorySummary
 
 const MEMORY_KEYS: readonly MemoryKey[] = ['rss', 'heapTotal', 'heapUsed', 'external', 'arrayBuffers']
 
 /** Samples process-memory peaks over an explicit start/stop interval. */
 export class ProcessMemorySampler {
+  readonly #memory = new ProcessMemoryPeakTracker()
+
   #running = false
   #timer: ReturnType<typeof setInterval> | null = null
-  #start: MemoryUsage | null = null
-  #peak: MemoryUsage | null = null
 
   /**
    * Starts sampling unless already running.
@@ -62,14 +64,13 @@ export class ProcessMemorySampler {
       return
     }
 
-    if (!Number.isFinite(sampleMs) || sampleMs <= 0) {
+    if (!isPositiveFiniteNumber(sampleMs)) {
       throw new RangeError('sampleMs must be a positive finite number')
     }
 
     this.#running = true
-    this.#start = process.memoryUsage()
-    this.#peak = { ...this.#start }
-    this.#timer = setInterval(() => this.#sample(), sampleMs)
+    this.#memory.start()
+    this.#timer = setInterval(() => this.#memory.sample(), sampleMs)
     this.#timer.unref?.()
   }
 
@@ -79,7 +80,7 @@ export class ProcessMemorySampler {
    * Returns `null` when the sampler is not running.
    */
   stop(): ProcessMemorySummary | null {
-    if (!this.#running || !this.#start || !this.#peak) {
+    if (!this.#running) {
       return null
     }
 
@@ -90,35 +91,22 @@ export class ProcessMemorySampler {
       this.#timer = null
     }
 
-    const end = this.#sample()
-    const start = this.#start
-    const peak = this.#peak
+    const memory = this.#memory.stop()
 
-    this.#start = null
-    this.#peak = null
+    if (!memory) {
+      throw new Error('process memory peak tracker did not produce a result')
+    }
 
     return Object.fromEntries(
       MEMORY_KEYS.map((key) => [
         key,
         {
-          startBytes: start[key],
-          endBytes: end[key],
-          peakBytes: peak[key],
-          deltaBytes: end[key] - start[key]
+          startBytes: memory.start[key],
+          endBytes: memory.end[key],
+          peakBytes: memory.peak[key],
+          deltaBytes: memory.end[key] - memory.start[key]
         }
       ])
     ) as unknown as ProcessMemorySummary
-  }
-
-  #sample(): MemoryUsage {
-    const current = process.memoryUsage()
-
-    if (this.#peak) {
-      for (const key of MEMORY_KEYS) {
-        this.#peak[key] = Math.max(this.#peak[key], current[key])
-      }
-    }
-
-    return current
   }
 }

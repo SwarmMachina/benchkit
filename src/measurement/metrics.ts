@@ -1,6 +1,7 @@
 import os from 'node:os'
 import { monitorEventLoopDelay, performance } from 'node:perf_hooks'
 import { bytesToMiB } from '../units/bytes-to-mib.js'
+import { ProcessMemoryPeakTracker } from './process-memory-peak-tracker.js'
 
 /** Options used when starting process and event-loop metrics collection. */
 export interface MetricsStartOptions {
@@ -74,6 +75,8 @@ export interface MetricsSummary {
 
 /** Stateful collector for process, event-loop, memory, and host-load metrics. */
 export default class Metrics {
+  readonly #memory = new ProcessMemoryPeakTracker()
+
   #running = false
 
   #sampleMs = 250
@@ -83,11 +86,6 @@ export default class Metrics {
   #cpu0: ReturnType<typeof process.cpuUsage> | null = null
   #elu0: ReturnType<typeof performance.eventLoopUtilization> | null = null
   #eld: ReturnType<typeof monitorEventLoopDelay> | null = null
-
-  #peakRss = 0
-  #peakHeap = 0
-  #peakExternal = 0
-  #peakArrayBuffers = 0
 
   #loadSum: [number, number, number] = [0, 0, 0]
   #loadPeak: [number, number, number] = [0, 0, 0]
@@ -110,10 +108,7 @@ export default class Metrics {
     this.#cpu0 = process.cpuUsage()
     this.#elu0 = performance.eventLoopUtilization()
 
-    this.#peakRss = 0
-    this.#peakHeap = 0
-    this.#peakExternal = 0
-    this.#peakArrayBuffers = 0
+    this.#memory.start()
     this.#loadSum = [0, 0, 0]
     this.#loadPeak = [0, 0, 0]
     this.#samples = 0
@@ -146,7 +141,13 @@ export default class Metrics {
       this.#eld.disable()
     }
 
-    this.#sample()
+    this.#sampleLoad()
+
+    const memory = this.#memory.stop()
+
+    if (!memory) {
+      throw new Error('metrics memory peak tracker did not produce a result')
+    }
 
     const dtMs = Math.max(1, performance.now() - this.#t0)
     const cpu = process.cpuUsage(this.#cpu0 as ReturnType<typeof process.cpuUsage>)
@@ -175,10 +176,10 @@ export default class Metrics {
         max: eldMax
       },
       memMB: {
-        rssPeak: bytesToMiB(this.#peakRss),
-        heapUsedPeak: bytesToMiB(this.#peakHeap),
-        externalPeak: bytesToMiB(this.#peakExternal),
-        arrayBuffersPeak: bytesToMiB(this.#peakArrayBuffers)
+        rssPeak: bytesToMiB(memory.peak.rss),
+        heapUsedPeak: bytesToMiB(memory.peak.heapUsed),
+        externalPeak: bytesToMiB(memory.peak.external),
+        arrayBuffersPeak: bytesToMiB(memory.peak.arrayBuffers)
       },
       loadAvg,
       loadPeak: this.#loadPeak
@@ -186,13 +187,11 @@ export default class Metrics {
   }
 
   #sample(): void {
-    const mu = process.memoryUsage()
+    this.#memory.sample()
+    this.#sampleLoad()
+  }
 
-    this.#peakRss = Math.max(this.#peakRss, mu.rss)
-    this.#peakHeap = Math.max(this.#peakHeap, mu.heapUsed)
-    this.#peakExternal = Math.max(this.#peakExternal, mu.external)
-    this.#peakArrayBuffers = Math.max(this.#peakArrayBuffers, mu.arrayBuffers || 0)
-
+  #sampleLoad(): void {
     const [load1 = 0, load5 = 0, load15 = 0] = os.loadavg()
 
     this.#loadSum[0] += load1

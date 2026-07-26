@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { forceGc, measureMemoryGrowth } from '@swarmmachina/benchkit'
+import { memoryUsage } from '../../helpers/memory-usage.ts'
 
 test('forceGc validates and executes bounded collection cycles', async () => {
   let collections = 0
@@ -42,14 +43,3 @@ test('measureMemoryGrowth reports retained deltas without enforcing policy', asy
   assert.equal(result.warmup, 2)
   assert.equal(result.iterations, 3)
 })
-
-function memoryUsage(overrides: Partial<NodeJS.MemoryUsage>): NodeJS.MemoryUsage {
-  return {
-    rss: 0,
-    heapTotal: 0,
-    heapUsed: 0,
-    external: 0,
-    arrayBuffers: 0,
-    ...overrides
-  }
-}
