@@ -1,5 +1,12 @@
 import { spawn, type SpawnOptions } from 'node:child_process'
 
+/**
+ * Runs the current Node.js executable with inherited standard streams.
+ * @param args Arguments passed after `process.execPath`.
+ * @param opts Additional child-process spawn options.
+ * @returns A Promise that resolves only for exit code `0`.
+ * @throws {Error} If spawning fails or the child exits unsuccessfully.
+ */
 export default function runChild(args: string[], opts: SpawnOptions = {}): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, args, { stdio: 'inherit', ...opts })

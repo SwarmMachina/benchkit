@@ -1,5 +1,6 @@
 import { isRecord } from '../validation/predicates.js'
 
+/** Schema identifier required by regression baseline files. */
 export const BASELINE_SCHEMA_VERSION = 'regression-ci-baseline/v1' as const
 
 /** Benchmark identity and invocation metadata stored in a baseline. */
@@ -100,6 +101,14 @@ export type BaselineValidationResult =
       errors: string[]
     }
 
+/**
+ * Validates an unknown value against the versioned regression baseline schema.
+ *
+ * Validation accumulates human-readable failures and does not throw for
+ * malformed or uninspectable input.
+ * @param json Unknown value loaded from a baseline file.
+ * @returns Success or every detected schema violation.
+ */
 export function validateBaseline(json: unknown): BaselineValidationResult {
   const errors: string[] = []
 
@@ -153,6 +162,11 @@ export function validateBaseline(json: unknown): BaselineValidationResult {
   return errors.length ? { ok: false, errors } : { ok: true, errors: [] }
 }
 
+/**
+ * Tests whether a value conforms to the current baseline schema.
+ * @param json Unknown candidate value.
+ * @returns `true` when {@link validateBaseline} reports no errors.
+ */
 export function isBaseline(json: unknown): json is Baseline {
   return validateBaseline(json).ok
 }

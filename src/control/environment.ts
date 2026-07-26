@@ -27,6 +27,11 @@ export interface EnvironmentSnapshot {
   totalMemoryBytes: number
 }
 
+/**
+ * Captures stable host and Node.js runtime metadata for a benchmark artifact.
+ * @returns A new environment snapshot. No process identifiers or environment
+ * variables are included.
+ */
 export function snapshotEnvironment(): EnvironmentSnapshot {
   const cpus = os.cpus()
 

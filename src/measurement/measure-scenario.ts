@@ -31,6 +31,15 @@ export interface ScenarioMeasurement extends BatchMeasurement {
   pipelining: number
 }
 
+/**
+ * Measures a batch and attaches stable scenario dimensions used by reports.
+ * @param options Scenario identity, topology, and batch measurement options.
+ * @param options.name Stable scenario identifier.
+ * @param options.connections Logical connection count associated with the result.
+ * @param options.pipelining Logical pipeline depth associated with the result.
+ * @returns A batch measurement annotated with the normalized scenario dimensions.
+ * @throws {TypeError} If a scenario dimension is empty or not a positive safe integer.
+ */
 export default async function measureScenario({
   name,
   connections = 1,

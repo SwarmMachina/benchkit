@@ -5,6 +5,7 @@ import { snapshotEnvironment, type EnvironmentSnapshot } from '../control/enviro
 import { isRecord } from '../validation/predicates.js'
 import { requireNonEmptyString } from '../validation/value-parsers.js'
 
+/** Schema identifier written to every benchmark artifact. */
 export const BENCHMARK_ARTIFACT_SCHEMA_VERSION = 'benchmark-run/v1' as const
 
 /** Versioned, serializable benchmark artifact. */
@@ -66,6 +67,18 @@ export interface CreateBenchmarkArtifactOptions<
   environment?: EnvironmentSnapshot
 }
 
+/**
+ * Constructs a validated, versioned benchmark artifact value.
+ * @param options Suite identity, parameters, results, metadata, and provenance.
+ * @param options.suite Stable benchmark suite identifier.
+ * @param options.parameters Effective benchmark parameters.
+ * @param options.results Suite-specific result value.
+ * @param options.metadata Optional suite-specific metadata.
+ * @param options.generatedAt ISO-8601 artifact creation time.
+ * @param options.environment Host and runtime environment snapshot.
+ * @returns A JSON-serializable artifact using the current schema version.
+ * @throws {TypeError} If identifiers, records, or the generated timestamp are invalid.
+ */
 export function createBenchmarkArtifact<
   Parameters extends Record<string, unknown>,
   Results,
@@ -103,6 +116,15 @@ export function createBenchmarkArtifact<
   }
 }
 
+/**
+ * Atomically writes a benchmark artifact as indented JSON with a trailing newline.
+ *
+ * A uniquely named sibling file is renamed into place and removed on failure.
+ * @param filePath Destination path.
+ * @param artifact Artifact to serialize.
+ * @returns A Promise that resolves after the atomic rename completes.
+ * @throws {TypeError} If `filePath` is empty or contains a null byte.
+ */
 export async function writeBenchmarkArtifact(filePath: string, artifact: BenchmarkArtifact): Promise<void> {
   if (typeof filePath !== 'string' || filePath.length === 0 || filePath.includes('\0')) {
     throw new TypeError('benchmark artifact path must be a non-empty path')

@@ -72,6 +72,14 @@ export interface RelativeMetricGuardResult {
   rows: RelativeMetricGuardRow[]
 }
 
+/**
+ * Evaluates relative regression allowances against candidate/reference pairs.
+ * @param params Metric rules containing values, direction, percentage allowance, and slack.
+ * @param params.metrics Ordered relative metric rules to evaluate.
+ * @returns Overall status, normalized decision rows, and human-readable failures.
+ * @throws {TypeError} If a metric rule has an invalid shape or direction.
+ * @throws {RangeError} If an allowance or slack is negative or non-finite.
+ */
 export function relativeMetricGuard({ metrics }: RelativeMetricGuardParams): RelativeMetricGuardResult {
   if (!Array.isArray(metrics)) {
     throw new TypeError('metrics must be an array')

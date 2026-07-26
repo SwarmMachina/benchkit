@@ -14,6 +14,16 @@ export type BenchRun = BenchmarkRun<ProfiledBenchmarkRow>
 /** Profile-capable benchmark result accepted by `copyCpuProfiles`. */
 export type Bench = ProfiledBenchmarkResult
 
+/**
+ * Copies V8 CPU-profile artifacts into a stable benchmark artifact directory.
+ *
+ * Processed profiles are parsed while raw isolate logs are preserved verbatim.
+ * @param bench Profile-capable benchmark result.
+ * @param test Stable benchmark case identifier.
+ * @param outDir Artifact root receiving a `cpu` directory.
+ * @param cwd Source-path prefix removed from parsed profile locations.
+ * @returns Metadata for every copied benchmark-row profile.
+ */
 export default async function copyCpuProfiles(
   bench: Bench,
   test: string,

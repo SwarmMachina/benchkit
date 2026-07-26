@@ -16,6 +16,11 @@ export interface DistributionSummary {
   values: number[]
 }
 
+/**
+ * Summarizes finite observations with a median and linear quartiles.
+ * @param values Numeric observations; missing and non-finite values are ignored.
+ * @returns Finite input values in original order and their distribution statistics.
+ */
 export function distribution(values: readonly NullableNumber[]): DistributionSummary {
   const finite = values.filter((value): value is number => Number.isFinite(value))
 

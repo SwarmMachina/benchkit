@@ -1,3 +1,8 @@
+/**
+ * Randomizes a string array in place with the Fisher-Yates algorithm.
+ * @param arr Mutable array to shuffle.
+ * @returns The same array instance after mutation.
+ */
 export default function shuffle(arr: string[]): string[] {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = (Math.random() * (i + 1)) | 0

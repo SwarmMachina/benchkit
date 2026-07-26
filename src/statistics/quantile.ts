@@ -1,5 +1,12 @@
 import type { NullableNumber } from './median.js'
 
+/**
+ * Computes a linearly interpolated quantile over finite observations.
+ * @param values Nullable observations; non-finite values are discarded.
+ * @param quantile Quantile from `0` through `1`.
+ * @returns The interpolated value, or `null` when no finite observations remain.
+ * @throws {RangeError} If `quantile` is outside the inclusive unit interval.
+ */
 export function quantileLinear(values: readonly NullableNumber[], quantile: number): number | null {
   validateQuantile(quantile)
 
@@ -26,6 +33,13 @@ export function quantileLinear(values: readonly NullableNumber[], quantile: numb
   return lowerValue + (upperValue - lowerValue) * (index - lower)
 }
 
+/**
+ * Computes a nearest-rank quantile over finite observations.
+ * @param values Nullable observations; non-finite values are discarded.
+ * @param quantile Quantile from `0` through `1`.
+ * @returns The nearest ranked value, or `null` when no finite observations remain.
+ * @throws {RangeError} If `quantile` is outside the inclusive unit interval.
+ */
 export function quantileNearestRank(values: readonly NullableNumber[], quantile: number): number | null {
   validateQuantile(quantile)
 

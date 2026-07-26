@@ -90,6 +90,15 @@ type MemoryKey = Exclude<keyof MemoryGrowthSummary, 'warmup' | 'iterations'>
 
 const MEMORY_KEYS: readonly MemoryKey[] = ['rss', 'heapTotal', 'heapUsed', 'external', 'arrayBuffers']
 
+/**
+ * Runs bounded garbage-collection cycles and allows the event loop to settle.
+ * @param options Collection count, settling delay, and optional collector implementation.
+ * @param options.cycles Number of collection cycles.
+ * @param options.settleMs Delay after each collection cycle.
+ * @param options.collectGarbage Collector implementation, normally `globalThis.gc`.
+ * @returns A Promise that resolves after every collection cycle completes.
+ * @throws {Error} If no garbage collector is available; start Node.js with `--expose-gc`.
+ */
 export async function forceGc({
   cycles = 4,
   settleMs = 10,
@@ -112,6 +121,20 @@ export async function forceGc({
   }
 }
 
+/**
+ * Measures retained process-memory growth around repeated operation runs.
+ *
+ * Warmup executions are excluded. Garbage collection runs immediately before
+ * the start and end snapshots.
+ * @param options Iteration counts, operation, garbage collection, and snapshot provider.
+ * @param options.iterations Measured operation count.
+ * @param options.run Operation invoked for warmup and measured iterations.
+ * @param options.warmup Unmeasured warmup operation count.
+ * @param options.gc Garbage-collection stabilization options.
+ * @param options.memoryUsage Process-memory snapshot provider.
+ * @returns Per-category start, end, and retained byte deltas.
+ * @throws {TypeError} If counts or callbacks are invalid.
+ */
 export async function measureMemoryGrowth({
   iterations,
   run,

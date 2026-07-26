@@ -55,6 +55,14 @@ export interface MetricGuardResult {
   rows: MetricGuardRow[]
 }
 
+/**
+ * Evaluates absolute metric bounds for a set of benchmark cases.
+ * @param params Case names, observed results, and optional baseline policies.
+ * @param params.cases Benchmark case names to evaluate.
+ * @param params.results Observed metric values by case.
+ * @param params.baselineTests Expected metric bounds by case.
+ * @returns Evaluated rows together with missing-value and threshold failures.
+ */
 export default function metricGuard({ cases, results, baselineTests }: MetricGuardParams): MetricGuardResult {
   const failures: string[] = []
   const rows: MetricGuardRow[] = []

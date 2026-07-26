@@ -15,6 +15,12 @@ export interface NdjsonDecoderOptions {
   maxLineBytes?: number
 }
 
+/**
+ * Serializes one value as a newline-delimited JSON frame.
+ * @param message JSON-serializable control message.
+ * @returns The serialized JSON value followed by a single newline.
+ * @throws {TypeError} If the value cannot be represented as JSON.
+ */
 export function encodeNdjson(message: unknown): string {
   return `${JSON.stringify(message)}\n`
 }

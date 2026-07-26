@@ -45,6 +45,19 @@ async function listenOnce(host: string, port: number): Promise<number> {
   }
 }
 
+/**
+ * Selects a currently available TCP port by briefly binding the requested host.
+ *
+ * The returned port is not reserved after this function resolves; callers must
+ * still handle a bind race when starting their server.
+ * @param options Local host and optional inclusive search range.
+ * @param options.host Local interface on which availability is tested.
+ * @param options.range Optional inclusive minimum and maximum ports.
+ * @returns An available port selected by the operating system or from the range.
+ * @throws {TypeError} If `host` is empty or contains control characters.
+ * @throws {RangeError} If the requested range is invalid.
+ * @throws {BenchkitError} If no port in the range can be bound.
+ */
 export default async function getFreePort({ host = '127.0.0.1', range }: GetFreePortOptions = {}): Promise<number> {
   if (typeof host !== 'string' || host.length === 0 || /[\0\r\n]/u.test(host)) {
     throw new TypeError('host must be a non-empty string without control characters')

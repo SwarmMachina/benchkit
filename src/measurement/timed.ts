@@ -13,6 +13,12 @@ interface TimedThrown {
   _timedMs?: number
 }
 
+/**
+ * Measures the wall time required for an operation to settle.
+ * @param fn Synchronous or asynchronous operation to invoke once.
+ * @returns The operation result and elapsed milliseconds.
+ * @throws {unknown} The original operation error after attaching `_timedMs`.
+ */
 export default async function timed<T>(fn: () => T | Promise<T>): Promise<TimedResult<T>> {
   const t0 = performance.now()
 

@@ -18,6 +18,11 @@ export interface ProcessedV8Profile {
   processedPath: string
 }
 
+/**
+ * Selects the newest V8 isolate log in a directory.
+ * @param dir Directory containing `isolate-*-v8.log` files.
+ * @returns The newest matching basename, or `null` when none exist.
+ */
 export async function pickNewestLog(dir: string): Promise<string | null> {
   const items = await fs.readdir(dir)
   const logs = items.filter((f) => f.startsWith('isolate-') && f.endsWith('-v8.log'))
@@ -39,6 +44,12 @@ export async function pickNewestLog(dir: string): Promise<string | null> {
   return best?.f || null
 }
 
+/**
+ * Converts the newest isolate log with the current Node.js `--prof-process`.
+ * @param profileDir Directory containing the raw isolate log.
+ * @returns Raw and processed paths, or `null` when no log exists.
+ * @throws {Error} If the profiler subprocess cannot start or exits unsuccessfully.
+ */
 export async function processV8Profile(profileDir: string): Promise<ProcessedV8Profile | null> {
   const logName = await pickNewestLog(profileDir)
 

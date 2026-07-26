@@ -71,6 +71,13 @@ export interface TerminateChildProcessOptions {
   killProcess?: KillProcess
 }
 
+/**
+ * Waits for a child process to exit without retaining listeners after settlement.
+ * @param child Child process to observe.
+ * @param timeoutMs Maximum wait in milliseconds; `0` performs an immediate bounded check.
+ * @returns Exit state, or `null` when the deadline expires first.
+ * @throws {TypeError} If `timeoutMs` is not a non-negative finite number.
+ */
 export async function waitForChildExit(child: ChildProcess, timeoutMs: number): Promise<ChildExitResult | null> {
   requireNonNegativeNumber(timeoutMs, 'timeoutMs')
   const exited = currentExit(child)
@@ -110,6 +117,13 @@ export async function waitForChildExit(child: ChildProcess, timeoutMs: number): 
   })
 }
 
+/**
+ * Force-terminates a Windows process tree with `taskkill /T /F`.
+ * @param pid Positive process identifier passed to `taskkill`.
+ * @param timeoutMs Positive execution deadline in milliseconds.
+ * @param execute Injectable `execFile` implementation for tests.
+ * @returns A Promise that resolves after `taskkill` succeeds.
+ */
 export async function terminateWindowsProcessTree(
   pid: number,
   timeoutMs: number,
@@ -134,6 +148,21 @@ export async function terminateWindowsProcessTree(
   })
 }
 
+/**
+ * Terminates a child with a bounded graceful phase followed by forced cleanup.
+ * @param child Child process to terminate.
+ * @param options Signals, deadlines, tree behavior, and injectable platform operations.
+ * @param options.gracefulSignal First signal, or `false` to skip the graceful phase.
+ * @param options.forceSignal Signal used after the graceful deadline.
+ * @param options.graceMs Graceful-exit deadline in milliseconds.
+ * @param options.killMs Forced-exit deadline in milliseconds.
+ * @param options.killTree Whether to terminate the complete process tree.
+ * @param options.platform Platform used to select tree termination behavior.
+ * @param options.executeFile Injectable Windows `taskkill` executor.
+ * @param options.killProcess Injectable process-group signal implementation.
+ * @returns Final exit state and whether force escalation was required.
+ * @throws {TimeoutError} If the process remains alive after the forced deadline.
+ */
 export async function terminateChildProcess(
   child: ChildProcess,
   {

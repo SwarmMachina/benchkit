@@ -187,6 +187,16 @@ export class V8HeapAllocationSampler {
   }
 }
 
+/**
+ * Runs one operation while V8 heap-allocation sampling is active.
+ *
+ * The inspector session is disposed in a `finally` block even when the
+ * operation or profiler fails.
+ * @param run Operation whose allocations should be sampled.
+ * @param options Heap profiler sampling configuration.
+ * @returns The operation value together with its allocation profile and total bytes.
+ * @throws {TypeError} If `run` is not a function or options are invalid.
+ */
 export async function sampleV8HeapAllocations<Value>(
   run: () => Value | Promise<Value>,
   options: V8HeapAllocationSamplerOptions = {}
@@ -209,6 +219,12 @@ export async function sampleV8HeapAllocations<Value>(
   }
 }
 
+/**
+ * Sums self-allocation bytes across an allocation profile tree.
+ * @param profile V8 sampling heap profile.
+ * @returns Total sampled self-size across every node.
+ * @throws {TypeError} If the profile contains malformed nodes or sizes.
+ */
 export function sampledAllocationBytes(profile: V8AllocationProfile): number {
   if (!profile?.head || typeof profile.head !== 'object') {
     throw new TypeError('profile.head must be an allocation profile node')

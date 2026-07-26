@@ -20,6 +20,15 @@ export interface RegressionReportInput {
   failures?: readonly string[]
 }
 
+/**
+ * Renders metric and CPU guard output as a GitHub-compatible Markdown report.
+ * @param input Suite name, optional guard results, and additional failures.
+ * @param input.suite Benchmark suite displayed in the heading.
+ * @param input.metric Optional absolute metric guard result.
+ * @param input.cpu Optional CPU profile guard result.
+ * @param input.failures Additional suite-level failures.
+ * @returns A complete Markdown section with tables and final status.
+ */
 export function renderRegressionMarkdown({ suite, metric, cpu, failures = [] }: RegressionReportInput): string {
   const lines = [`## Regression profile — ${suite}`, '']
   const metricRows = metric?.rows ?? []

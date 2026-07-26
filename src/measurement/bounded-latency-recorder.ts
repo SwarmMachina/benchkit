@@ -290,6 +290,13 @@ export class BoundedLatencyRecorder {
   }
 }
 
+/**
+ * Validates and summarizes a mergeable bounded-latency snapshot.
+ * @param snapshot Snapshot produced by {@link BoundedLatencyRecorder.snapshot}.
+ * @returns Count, percentile, range-error, and accuracy measurements.
+ * @throws {TypeError} If the snapshot shape or counters are invalid.
+ * @throws {RangeError} If its configuration or bucket layout is inconsistent.
+ */
 export function summarizeBoundedLatencySnapshot(snapshot: BoundedLatencySnapshot): BoundedLatencySummary {
   if (!snapshot || typeof snapshot !== 'object') {
     throw new TypeError('snapshot must be a bounded latency snapshot')

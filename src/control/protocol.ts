@@ -72,6 +72,13 @@ export interface ControlEvent {
   error?: SerializedError
 }
 
+/**
+ * Validates an unknown runner-to-agent control request.
+ * @param value Value decoded from the control transport.
+ * @returns A normalized request using the current protocol version.
+ * @throws {ProtocolError} If the request shape or operation is invalid.
+ * @throws {VersionMismatchError} If the protocol version is incompatible.
+ */
 export function parseRequest(value: unknown): ControlRequest {
   if (!isRecord(value)) {
     throw new ProtocolError('Control request must be an object')
@@ -97,6 +104,13 @@ export function parseRequest(value: unknown): ControlRequest {
   }
 }
 
+/**
+ * Validates an unknown agent response or unsolicited event.
+ * @param value Value decoded from the control transport.
+ * @returns The validated response or event.
+ * @throws {ProtocolError} If the envelope is invalid.
+ * @throws {VersionMismatchError} If the protocol version is incompatible.
+ */
 export function parseResponse(value: unknown): ControlResponse | ControlEvent {
   if (!isRecord(value)) {
     throw new ProtocolError('Control response must be an object')

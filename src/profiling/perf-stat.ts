@@ -30,6 +30,15 @@ export interface NormalizedPerfStatCounter extends PerfStatCounter {
   perOperation: number | null
 }
 
+/**
+ * Parses comma-separated `perf stat -x,` output.
+ *
+ * Comment and empty lines are ignored. Kernel unavailable markers are retained
+ * as explicit counter status instead of being converted to zero.
+ * @param input Raw standard-error text emitted by `perf stat`.
+ * @returns Parsed counters in input order.
+ * @throws {TypeError} If a row or numeric field is malformed.
+ */
 export function parsePerfStat(input: string): PerfStatCounter[] {
   if (typeof input !== 'string') {
     throw new TypeError('perf stat input must be a string')
@@ -67,6 +76,14 @@ export function parsePerfStat(input: string): PerfStatCounter[] {
   return counters
 }
 
+/**
+ * Divides counted perf values by a logical operation count.
+ * @param counters Parsed perf counters.
+ * @param operations Positive finite operation count.
+ * @returns Copies of the counters with `perOperation` values.
+ * @throws {TypeError} If a counter is inconsistent or malformed.
+ * @throws {RangeError} If `operations` is not positive and finite.
+ */
 export function normalizePerfCounters(
   counters: readonly PerfStatCounter[],
   operations: number

@@ -52,8 +52,15 @@ export interface PairedComparisonResult {
   iqr: TukeyHinges
 }
 
-// This is the median-of-halves Tukey-hinges convention used by the source
-// benchmark: the central value is excluded from both halves for odd samples.
+/**
+ * Computes median-of-halves Tukey hinges for a finite distribution.
+ *
+ * The central value is excluded from both halves for odd sample counts.
+ * @param values At least two finite observations.
+ * @returns Explicit Tukey first and third hinges.
+ * @throws {RangeError} If fewer than two observations are supplied.
+ * @throws {TypeError} If any observation is non-finite.
+ */
 export function tukeyHinges(values: readonly number[]): TukeyHinges {
   if (!Array.isArray(values) || values.length < 2) {
     throw new RangeError('Tukey hinges require at least two values')
@@ -73,6 +80,15 @@ export function tukeyHinges(values: readonly number[]): TukeyHinges {
   }
 }
 
+/**
+ * Compares matched candidate/reference observations without breaking pairing.
+ * @param pairs At least two finite candidate/reference pairs.
+ * @param options Direction used to count candidate wins.
+ * @param options.direction Whether a higher or lower candidate value wins.
+ * @returns Medians, signed pair deltas, wins, and Tukey hinges.
+ * @throws {TypeError} If a pair or direction is invalid.
+ * @throws {RangeError} If fewer than two pairs exist or a reference is zero.
+ */
 export function pairedComparison(
   pairs: readonly ComparisonPair[],
   { direction = 'higher' }: PairedComparisonOptions = {}

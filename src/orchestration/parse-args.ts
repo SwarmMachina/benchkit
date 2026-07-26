@@ -20,6 +20,16 @@ export interface ParseArgsOptions {
   offset?: number
 }
 
+/**
+ * Parses a small flag vocabulary into a copy of the supplied defaults.
+ * @param argv Argument vector to inspect.
+ * @param defaults Initial result values; the object itself is not mutated.
+ * @param handlers Flag handlers keyed by exact argument name.
+ * @param options Strictness and starting offset.
+ * @returns A populated copy of `defaults`.
+ * @throws {TypeError} In strict mode, for unknown flags or missing values.
+ * @throws {RangeError} If `offset` is outside `argv`.
+ */
 export default function parseArgs<T extends object>(
   argv: string[],
   defaults: T,

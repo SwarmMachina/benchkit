@@ -98,6 +98,16 @@ export interface BatchMeasurement {
   processMemory?: ProcessMemorySummary
 }
 
+/**
+ * Measures one bounded batch and derives throughput, latency, ELU, and memory deltas.
+ * @param options Operation count, measured callback, and optional setup and memory sampling.
+ * @param options.operations Logical operations completed by the measured callback.
+ * @param options.run Callback that performs the batch and returns latency data.
+ * @param options.before Optional setup excluded from measurement.
+ * @param options.memorySampleMs Optional process-memory peak sampling interval.
+ * @returns The measured batch summary after the callback settles.
+ * @throws {TypeError} If `operations` is not a positive safe integer.
+ */
 export default async function measureBatch({
   operations,
   run,

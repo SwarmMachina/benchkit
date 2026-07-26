@@ -18,6 +18,11 @@ export function optionalFixedDecimal(value: number | null | undefined, digits = 
   return value === null || value === undefined ? 'n/a' : fixedDecimal(value, digits)
 }
 
+/**
+ * Formats bytes using binary units from bytes through gibibytes.
+ * @param n Byte count to format.
+ * @returns A localized-independent value and binary unit.
+ */
 export function fmtBytes(n: number): string {
   const u = ['B', 'KiB', 'MiB', 'GiB']
 
@@ -32,10 +37,20 @@ export function fmtBytes(n: number): string {
   return `${x.toFixed(i === 0 ? 0 : 2)} ${u[i]}`
 }
 
+/**
+ * Formats a number with the `en-US` locale.
+ * @param n Number to format.
+ * @returns Locale-formatted numeric text.
+ */
 export function fmtNum(n: number): string {
   return n.toLocaleString('en-US')
 }
 
+/**
+ * Formats a local date as `YYYYMMDD-HHmmss` for stable artifact names.
+ * @param d Date to format.
+ * @returns Compact local-time timestamp.
+ */
 export function formatYmdHms(d: Date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -50,6 +65,11 @@ export function formatYmdHms(d: Date = new Date()): string {
   )
 }
 
+/**
+ * Formats milliseconds as milliseconds, seconds, or minutes and seconds.
+ * @param ms Duration in milliseconds.
+ * @returns Human-readable duration, or `'n/a'` for non-finite input.
+ */
 export function msToHuman(ms: number): string {
   if (!isFinite(ms)) {
     return 'n/a'

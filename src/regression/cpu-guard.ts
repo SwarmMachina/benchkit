@@ -78,6 +78,14 @@ export interface CpuGuardResult {
   rows: CpuGuardRow[]
 }
 
+/**
+ * Evaluates V8 CPU profiles against sampling-quality and GC-share thresholds.
+ * @param params Collected profiles, optional policy, and required profile keys.
+ * @param params.cpuProfiles Collected and parsed CPU profiles.
+ * @param params.guard Optional sampling-quality and regression policy.
+ * @param params.expectedKeys Required profile keys when profiles are mandatory.
+ * @returns Normalized rows and every policy failure; an omitted policy disables the guard.
+ */
 export default function cpuGuard({ cpuProfiles, guard, expectedKeys }: CpuGuardParams): CpuGuardResult {
   if (!guard) {
     return { failures: [], rows: [] }

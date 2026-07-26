@@ -15,6 +15,14 @@ export interface RenderBatchMeasurementsOptions {
   includeMemoryPeaks?: boolean
 }
 
+/**
+ * Renders scenario measurements as a GitHub-compatible Markdown table.
+ * @param measurements Scenario measurements in display order.
+ * @param options Optional parameter line and memory-peak column policy.
+ * @param options.parameters Optional parameter text rendered above the table.
+ * @param options.includeMemoryPeaks Whether to include heap and RSS peak columns.
+ * @returns The parameter line, when supplied, followed by the measurement table.
+ */
 export function renderBatchMeasurementsMarkdown(
   measurements: readonly ScenarioMeasurement[],
   {

@@ -10,6 +10,16 @@ interface PromiseConstructorWithResolvers {
   withResolvers<T>(): PromiseResolvers<T>
 }
 
+/**
+ * Waits for the first child-process IPC message accepted by a predicate.
+ *
+ * All listeners and the deadline timer are removed when the Promise settles.
+ * @param p Child process with an IPC channel.
+ * @param predicate Synchronous message acceptance predicate.
+ * @param timeoutMs Maximum wait in milliseconds.
+ * @returns The first accepted message.
+ * @throws {Error} If the child exits, emits an error, or reaches the deadline first.
+ */
 export default function waitForMessage(
   p: ChildProcess,
   predicate: (message: unknown) => boolean,

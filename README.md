@@ -13,13 +13,39 @@ histograms, process and event-loop measurements, benchmark result contracts,
 regression guards, and local or SSH target orchestration. Runtime code is
 ESM-only and uses Node.js built-ins.
 
-## Install
+## Features
+
+- **HTTP/1.1 load generation** — Persistent connections, pipelining, HTTP/HTTPS,
+  fixed-rate scheduling, and coordinated-omission correction
+- **Native WebSocket load generation** — Node.js built-in client with no `ws`
+  dependency, bounded in-flight messages, and send-buffer backpressure
+- **Bounded measurements** — Mergeable latency histograms, throughput, CPU,
+  event-loop utilization, and process-memory peaks
+- **Regression tooling** — Absolute and relative metric guards, paired
+  comparisons, CPU profiles, and versioned benchmark artifacts
+- **Local and SSH orchestration** — Explicit target lifecycle, independent
+  deadlines, direct load traffic, and bounded diagnostics
+- **Zero runtime dependencies** — Native ESM implemented with Node.js built-ins
+
+## Installation
 
 ```bash
 pnpm add -D @swarmmachina/benchkit
 ```
 
-## HTTP/1 load generation
+### Runtime requirements
+
+- **Node.js 22.13 or newer within Node.js 22, or Node.js 24** — enforced by
+  `package.json#engines`.
+- **Native ESM** — CommonJS `require()` is not a supported package surface.
+- **Worker threads** — HTTP and WebSocket generators create persistent clients
+  in worker threads.
+- **Optional SSH tooling** — Remote target orchestration requires `ssh`, `tar`,
+  key-based authentication, and direct reachability of the target load port.
+
+## Quick Start
+
+### HTTP/1 load generation
 
 `runHttp1Load()` runs persistent worker threads and keep-alive connections. It
 supports pipelining, same-connection warmup, closed-loop saturation, fixed-rate
@@ -74,7 +100,7 @@ Warmup and measurement use the same workers and sockets. Workers drain
 outstanding warmup responses and reset counters before measurement, preserving
 connection and JIT state.
 
-### Result groups
+#### Result groups
 
 | Group           | Contents                                                               |
 | --------------- | ---------------------------------------------------------------------- |
@@ -98,7 +124,7 @@ safely sustain HTTP/1.1 pipelining.
 The complete option and result contracts are documented in the published
 TypeScript declarations and appear directly in editor hover and completion.
 
-## WebSocket load generation
+### WebSocket load generation
 
 `runWebSocketLoad()` uses the native WebSocket client shipped with Node.js 22
 and 24. It adds no `ws` runtime dependency. Persistent connections run in
@@ -151,7 +177,14 @@ The command prints the effective connections, duration, in-flight limit,
 workers, message size, and optional rate together with throughput, p95/p99,
 ELU, CPU, RSS, backpressure, dropped arrivals, and errors.
 
-## Measurement
+## API Documentation
+
+The package is organized by benchmark responsibility. Every exported type,
+class, function, constant, option, result field, and public class member carries
+JSDoc in the emitted declarations. Editor hover therefore exposes defaults,
+units, lifecycle behavior, failure contracts, and bounded-resource semantics.
+
+### Measurement
 
 Use the package root for the common API or a domain subpath for a narrower
 surface.
@@ -181,7 +214,7 @@ worker snapshots without transferring raw samples, and declares its maximum
 relative error. Raw latency arrays remain supported when exact nearest-rank
 results are required.
 
-## Target orchestration
+### Target orchestration
 
 `TargetProvider` runs the same short-lived control agent locally or
 over SSH. Load traffic connects directly to the target; it never passes through
@@ -227,7 +260,7 @@ Startup, reachability, command, graceful-shutdown, and force-kill deadlines are
 independent. Local targets may collect CPU profiles; remote profiling is
 rejected before an SSH process is started.
 
-## Package surfaces
+### Package surfaces
 
 | Subpath           | Purpose                                                          |
 | ----------------- | ---------------------------------------------------------------- |
@@ -255,7 +288,7 @@ surface from `package.json#exports` and rejects undocumented type contracts.
 The package-level declaration entrypoint is emitted as `dist/types.d.ts`;
 domain declarations remain colocated below `dist/`.
 
-## Runtime design
+### Runtime design
 
 - No runtime dependencies.
 - Native ESM on Node.js 22 and 24.
@@ -269,7 +302,9 @@ domain declarations remain colocated below `dist/`.
 - Benchmark artifacts include a versioned schema and a host/runtime environment
   snapshot.
 
-## Local capacity check
+## Testing
+
+### Local capacity check
 
 The smoke command starts a fixed-response `node:http` target and the generator
 on the same machine:
@@ -286,7 +321,7 @@ pnpm run bench:http1-load
 Add `BENCHKIT_HTTP_RATE=50000` for fixed-rate scheduling. Use separate target
 and generator hosts for publishable comparisons.
 
-## Development
+### Development
 
 ```bash
 corepack enable
@@ -336,6 +371,42 @@ forced shutdown, diagnostics, and concurrency.
 
 Configure keys, ports, and jump hosts in `~/.ssh/config`. The command builds,
 stages, tests, and cleans up automatically.
+
+## Release
+
+Releases are tag-driven and must use the version already embedded in
+`package.json` and `BENCHKIT_VERSION`:
+
+```bash
+pnpm run release:gate
+pnpm run release:verify-tag -- v0.3.0
+```
+
+Push the reviewed commits, create the matching `v<version>` tag, and push that
+tag. Publication runs only from the `SwarmMachina/benchkit` GitHub Actions tag
+workflow and publishes with npm provenance. `release:publish` intentionally
+rejects local execution and non-tag refs.
+
+After publication, verify the registry metadata and SLSA provenance:
+
+```bash
+pnpm run release:verify-published
+```
+
+## Contributing
+
+Keep stateful resource owners and lifecycle components as classes with explicit
+constructors and private state. Keep pure transformations as functions. Before
+submitting a change, run:
+
+```bash
+corepack enable
+pnpm install --frozen-lockfile
+pnpm run release:gate
+```
+
+Public API changes must include declaration JSDoc, tests through the published
+package surface, and README updates when user-visible behavior changes.
 
 ## License
 

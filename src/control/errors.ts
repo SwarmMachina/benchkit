@@ -28,6 +28,11 @@ export interface SerializedError {
   details?: unknown
 }
 
+/**
+ * Converts any thrown value into a JSON-safe control-protocol error.
+ * @param error Value caught at a control boundary.
+ * @returns A serializable error preserving supported code, stack, and details fields.
+ */
 export function serializeError(error: unknown): SerializedError {
   if (error instanceof Error) {
     const candidate = error as Error & { code?: unknown; details?: unknown }
@@ -48,6 +53,11 @@ export function serializeError(error: unknown): SerializedError {
   }
 }
 
+/**
+ * Reconstructs a local {@link BenchkitError} from remote error data.
+ * @param error Serialized error received from a control transport.
+ * @returns A local error with the remote message, code, and details.
+ */
 export function errorFromSerialized(error: SerializedError): BenchkitError {
   return new BenchkitError(error.message, error.code ?? 'REMOTE_ERROR', error.details)
 }

@@ -33,6 +33,17 @@ export interface BalancedScheduleEntry<Label extends string = string> {
   order: readonly [Label, Label]
 }
 
+/**
+ * Builds a deterministic AB/BA execution order for paired benchmark runs.
+ * @param options Run count, labels, and strict balancing policy.
+ * @param options.runs Number of paired rounds.
+ * @param options.candidate Candidate label.
+ * @param options.reference Reference label.
+ * @param options.strictBalance Whether an odd run count is rejected.
+ * @returns One candidate/reference order for every one-based round.
+ * @throws {RangeError} If the run count cannot satisfy the requested balance.
+ * @throws {TypeError} If either label is empty.
+ */
 export function balancedSchedule<Candidate extends string = 'candidate', Reference extends string = 'reference'>({
   runs,
   candidate = 'candidate' as Candidate,

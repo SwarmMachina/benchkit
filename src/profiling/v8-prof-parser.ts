@@ -70,6 +70,14 @@ interface V8ProfileHeader {
   excludedTicks?: number
 }
 
+/**
+ * Parses text emitted by `node --prof-process` into bounded profile summaries.
+ * @param text Processed V8 statistical-profiler output.
+ * @param options Path normalization and per-section row limit.
+ * @param options.cwd Working-directory prefix removed from source locations.
+ * @param options.topN Maximum detailed rows retained per profile section.
+ * @returns Header totals, summary categories, and top detailed rows.
+ */
 export default function parseV8Profile(text: string, { cwd = '', topN = 10 }: V8ProfileOptions = {}): V8Profile {
   const lines = String(text).split(/\r?\n/)
   const header = parseHeader(lines)

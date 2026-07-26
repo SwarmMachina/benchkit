@@ -41,7 +41,10 @@ for (const target of Object.values(packageJson.exports)) {
       if (
         ts.isInterfaceDeclaration(declaration) ||
         ts.isTypeAliasDeclaration(declaration) ||
-        ts.isClassDeclaration(declaration)
+        ts.isClassDeclaration(declaration) ||
+        ts.isFunctionDeclaration(declaration) ||
+        ts.isVariableDeclaration(declaration) ||
+        ts.isEnumDeclaration(declaration)
       ) {
         publicDeclarations.add(declaration)
       }
@@ -65,7 +68,7 @@ if (failures.length > 0) {
   process.exit(1)
 }
 
-console.log(`public type documentation: ${publicDeclarations.size} declarations ok`)
+console.log(`public API documentation: ${publicDeclarations.size} declarations ok`)
 
 /**
  * Resolves a chain of TypeScript alias symbols.
@@ -91,7 +94,7 @@ function resolveAlias(symbol) {
  * @param {string} name Display name used in failures.
  */
 function checkDocumentation(declaration, name) {
-  requireDocumentation(declaration, name)
+  requireDocumentation(documentationNode(declaration), name)
 
   if (ts.isInterfaceDeclaration(declaration)) {
     checkMembers(declaration.members, name)
@@ -113,7 +116,28 @@ function checkDocumentation(declaration, name) {
     return
   }
 
+  if (ts.isEnumDeclaration(declaration)) {
+    checkMembers(declaration.members, name)
+
+    return
+  }
+
+  if (ts.isFunctionDeclaration(declaration) || ts.isVariableDeclaration(declaration)) {
+    return
+  }
+
   checkNestedType(declaration.type, name)
+}
+
+/**
+ * Returns the syntax node that owns JSDoc for a declaration.
+ * @param {ts.Declaration} declaration Declaration exposed by a package entry point.
+ * @returns {ts.Node} Node carrying the declaration's JSDoc block.
+ */
+function documentationNode(declaration) {
+  return ts.isVariableDeclaration(declaration) && ts.isVariableStatement(declaration.parent.parent)
+    ? declaration.parent.parent
+    : declaration
 }
 
 /**
