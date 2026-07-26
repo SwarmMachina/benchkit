@@ -1,17 +1,19 @@
 import net, { type Socket } from 'node:net'
 import { performance } from 'node:perf_hooks'
 import tls, { type TLSSocket } from 'node:tls'
+import { LoadConnection, type LoadConnectionOwner } from '../shared/load-connection.js'
+import { TimestampQueue } from '../shared/timestamp-queue.js'
 import { Http1ResponseParser } from './response-parser.js'
-import { TimestampQueue } from './timestamp-queue.js'
 import type { Http1WorkerData } from './worker-protocol.js'
 
-export interface Http1ConnectionOwner {
+export interface Http1ConnectionOwner extends LoadConnectionOwner {
   readonly closedLoopActive: boolean
   readonly fixedRateActive: boolean
 
   onConnectionConnected(): void
   onConnectionDisconnected(): void
   onConnectionClosed(abortedRequests: number): boolean
+  onConnectionIdle(): void
   onResponse(statusCode: number, sentAt: number): boolean
   onBytesRead(bytes: number): void
   onProtocolError(): void
@@ -19,12 +21,10 @@ export interface Http1ConnectionOwner {
   onConnectionError(): void
   onRequestsSent(count: number, bytes: number): void
   onSocketWrite(): void
-  onScheduledRequest(lagMs: number): void
-  onBackpressureStarted(): boolean
-  onBackpressureEnded(durationMs: number): void
+  onScheduledOperation(lagMs: number): void
 }
 
-export class Http1Connection {
+export class Http1Connection extends LoadConnection {
   readonly #owner: Http1ConnectionOwner
   readonly #data: Http1WorkerData
   readonly #request: Buffer
@@ -39,12 +39,10 @@ export class Http1Connection {
   #stopped = false
   #protocolFailure = false
   #timeoutFailure = false
-  #backpressured = false
-  #backpressureMeasured = false
-  #backpressureStartedAt = 0
   #pendingClosedLoop = 0
 
   constructor(owner: Http1ConnectionOwner, data: Http1WorkerData, request: Buffer, requestBatch: Buffer | null) {
+    super(owner)
     this.#owner = owner
     this.#data = data
     this.#request = request
@@ -80,7 +78,7 @@ export class Http1Connection {
       this.#owner.onConnectionConnected()
 
       if (this.#owner.closedLoopActive) {
-        this.fillPipeline()
+        this.fillClosedLoop()
       }
     })
     socket.on('data', (chunk: Buffer) => {
@@ -118,11 +116,11 @@ export class Http1Connection {
       }
     })
     socket.on('drain', () => {
-      if (socket !== this.#socket || !this.#backpressured) {
+      if (socket !== this.#socket || !this.backpressured) {
         return
       }
 
-      this.#endBackpressure()
+      this.finishBackpressure()
 
       if (this.#pendingClosedLoop > 0 && this.#owner.closedLoopActive) {
         const pending = this.#pendingClosedLoop
@@ -147,7 +145,7 @@ export class Http1Connection {
       }
 
       this.#socket = null
-      this.#endBackpressure()
+      this.finishBackpressure()
 
       if (this.#connected) {
         this.#connected = false
@@ -157,6 +155,7 @@ export class Http1Connection {
       const shouldReconnect = this.#owner.onConnectionClosed(this.#timestamps.size)
 
       this.#timestamps.clear()
+      this.#owner.onConnectionIdle()
       this.#rateBatch.length = 0
       this.#pendingClosedLoop = 0
       this.#parser.reset()
@@ -169,7 +168,7 @@ export class Http1Connection {
     })
   }
 
-  fillPipeline(): void {
+  fillClosedLoop(): void {
     if (!this.#owner.closedLoopActive || !this.#connected || this.#timestamps.size !== 0) {
       return
     }
@@ -177,25 +176,25 @@ export class Http1Connection {
     this.#replenishClosedLoop(this.#data.pipelining)
   }
 
-  canQueueRateRequest(): boolean {
+  canScheduleOperation(): boolean {
     return (
       this.#owner.fixedRateActive &&
       this.#connected &&
       !this.#stopped &&
-      !this.#backpressured &&
+      !this.backpressured &&
       this.#timestamps.size + this.#rateBatch.length < this.#data.pipelining
     )
   }
 
-  queueRateRequest(scheduledAt: number): void {
-    if (!this.canQueueRateRequest()) {
+  scheduleOperation(scheduledAt: number): void {
+    if (!this.canScheduleOperation()) {
       throw new Error('HTTP/1 fixed-rate scheduler exceeded connection capacity')
     }
 
     this.#rateBatch.push(scheduledAt)
   }
 
-  flushRateRequests(): void {
+  flushScheduledOperations(): void {
     if (this.#rateBatch.length === 0) {
       return
     }
@@ -216,7 +215,7 @@ export class Http1Connection {
 
   stop(): void {
     this.#stopped = true
-    this.#endBackpressure()
+    this.finishBackpressure()
     this.#socket?.destroy()
     this.#socket = null
     this.#timestamps.clear()
@@ -229,7 +228,7 @@ export class Http1Connection {
       return
     }
 
-    if (this.#backpressured) {
+    if (this.backpressured) {
       this.#pendingClosedLoop += count
 
       return
@@ -260,7 +259,7 @@ export class Http1Connection {
       this.#timestamps.push(timestamp)
 
       if (scheduledAt !== undefined) {
-        this.#owner.onScheduledRequest(Math.max(0, now - scheduledAt))
+        this.#owner.onScheduledOperation(Math.max(0, now - scheduledAt))
       }
     }
 
@@ -286,32 +285,8 @@ export class Http1Connection {
     }
 
     if (!accepted) {
-      this.#startBackpressure()
+      this.beginBackpressure()
     }
-  }
-
-  #startBackpressure(): void {
-    if (this.#backpressured) {
-      return
-    }
-
-    this.#backpressured = true
-    this.#backpressureMeasured = this.#owner.onBackpressureStarted()
-    this.#backpressureStartedAt = performance.now()
-  }
-
-  #endBackpressure(): void {
-    if (!this.#backpressured) {
-      return
-    }
-
-    if (this.#backpressureMeasured) {
-      this.#owner.onBackpressureEnded(performance.now() - this.#backpressureStartedAt)
-    }
-
-    this.#backpressured = false
-    this.#backpressureMeasured = false
-    this.#backpressureStartedAt = 0
   }
 
   #scheduleReconnect(): void {
