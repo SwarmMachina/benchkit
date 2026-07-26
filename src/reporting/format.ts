@@ -1,3 +1,23 @@
+/** Rounds a nullable finite measurement for console-table output. */
+export function fixed(value: number | null): number | string {
+  return value === null || !Number.isFinite(value) ? 'n/a' : Number(value.toFixed(2))
+}
+
+/** Formats a finite measurement with two decimals and an optional unit suffix. */
+export function fixedWithUnit(value: number, unit = ''): string {
+  return Number.isFinite(value) ? `${value.toFixed(2)}${unit}` : 'n/a'
+}
+
+/** Formats a finite number with a fixed decimal width. */
+export function fixedDecimal(value: number, digits = 2): string {
+  return Number.isFinite(value) ? value.toFixed(digits) : 'n/a'
+}
+
+/** Formats an optional finite number with a fixed decimal width. */
+export function optionalFixedDecimal(value: number | null | undefined, digits = 2): string {
+  return value === null || value === undefined ? 'n/a' : fixedDecimal(value, digits)
+}
+
 export function fmtBytes(n: number): string {
   const u = ['B', 'KiB', 'MiB', 'GiB']
 

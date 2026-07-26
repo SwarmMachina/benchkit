@@ -1,5 +1,6 @@
 import type { ScenarioMeasurement } from '../measurement/measure-scenario.js'
 import { bytesToMiB } from '../units/bytes-to-mib.js'
+import { fixedDecimal, optionalFixedDecimal } from './format.js'
 import { mdTable } from './step-summary.js'
 
 /** Presentation options for scenario measurement Markdown. */
@@ -35,14 +36,14 @@ export function renderBatchMeasurementsMarkdown(
   ]
   const rows = measurements.map((measurement) => [
     escapeCell(measurement.name),
-    fixed(measurement.durationMs),
-    fixed(measurement.operationsPerSecond, 0),
-    optionalFixed(measurement.latencyMs.p50, 4),
-    optionalFixed(measurement.latencyMs.p95, 4),
-    optionalFixed(measurement.latencyMs.p99, 4),
-    fixed(measurement.eluPct),
-    fixed(measurement.memoryDeltaMiB.heapUsed),
-    fixed(measurement.memoryDeltaMiB.rss),
+    fixedDecimal(measurement.durationMs),
+    fixedDecimal(measurement.operationsPerSecond, 0),
+    optionalFixedDecimal(measurement.latencyMs.p50, 4),
+    optionalFixedDecimal(measurement.latencyMs.p95, 4),
+    optionalFixedDecimal(measurement.latencyMs.p99, 4),
+    fixedDecimal(measurement.eluPct),
+    fixedDecimal(measurement.memoryDeltaMiB.heapUsed),
+    fixedDecimal(measurement.memoryDeltaMiB.rss),
     ...(includeMemoryPeaks
       ? [
           optionalBytes(measurement.processMemory?.heapUsed.peakBytes),
@@ -55,16 +56,8 @@ export function renderBatchMeasurementsMarkdown(
   return parameters ? `parameters: ${parameters}\n${table}` : table
 }
 
-function fixed(value: number, digits = 2): string {
-  return Number.isFinite(value) ? value.toFixed(digits) : 'n/a'
-}
-
-function optionalFixed(value: number | null | undefined, digits: number): string {
-  return value === null || value === undefined ? 'n/a' : fixed(value, digits)
-}
-
 function optionalBytes(value: number | undefined): string {
-  return value === undefined ? 'n/a' : fixed(bytesToMiB(value))
+  return value === undefined ? 'n/a' : fixedDecimal(bytesToMiB(value))
 }
 
 function escapeCell(value: string): string {

@@ -1,6 +1,7 @@
 import http from 'node:http'
 import os from 'node:os'
 import { runHttp1Load } from '../dist/load/http1/index.js'
+import { fixed } from '../dist/reporting/format.js'
 import { numberEnvironment } from './helpers/environment.js'
 
 const connections = numberEnvironment('BENCHKIT_HTTP_CONNECTIONS', 100)
@@ -63,12 +64,4 @@ try {
   await new Promise((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()))
   })
-}
-
-/**
- * @param {number | null} value
- * @returns {number | string}
- */
-function fixed(value) {
-  return value === null ? 'n/a' : Number(value.toFixed(2))
 }

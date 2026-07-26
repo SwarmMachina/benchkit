@@ -1,4 +1,5 @@
 import { TargetProvider } from '../dist/index.js'
+import { fixedWithUnit } from '../dist/reporting/format.js'
 import { summarizeAgentSoakValues } from './agent-soak-config.js'
 import { AgentSoakIteration } from './agent-soak-iteration.js'
 import { AgentSoakVerifier } from './agent-soak-verifier.js'
@@ -69,9 +70,8 @@ export class AgentSoakRunner {
  */
 function reportRow(name, values, unit) {
   const summary = summarizeAgentSoakValues(values)
-  const format = (value) => `${value.toFixed(2)}${unit}`
 
-  return `| ${name} | ${format(summary.p50)} | ${format(summary.p95)} | ${format(summary.p99)} | ${format(summary.max)} |`
+  return `| ${name} | ${fixedWithUnit(summary.p50, unit)} | ${fixedWithUnit(summary.p95, unit)} | ${fixedWithUnit(summary.p99, unit)} | ${fixedWithUnit(summary.max, unit)} |`
 }
 
 /**
@@ -86,7 +86,7 @@ function report(configuration, results, forcedStopMs, elapsedMs) {
 
   console.log(
     `agent SSH soak: iterations=${configuration.iterations}, concurrency=${configuration.concurrency}, ` +
-      `metricsMs=${configuration.metricsMs}, throughput=${((configuration.iterations / elapsedMs) * 1_000).toFixed(2)} sessions/s`
+      `metricsMs=${configuration.metricsMs}, throughput=${fixedWithUnit((configuration.iterations / elapsedMs) * 1_000, ' sessions/s')}`
   )
   console.log('| metric | p50 | p95 | p99 | max |')
   console.log('| --- | ---: | ---: | ---: | ---: |')
@@ -96,5 +96,5 @@ function report(configuration, results, forcedStopMs, elapsedMs) {
   console.log(reportRow('target CPU', values('cpuCorePct'), '%'))
   console.log(reportRow('target ELU', values('eluPct'), '%'))
   console.log(reportRow('target RSS peak', values('rssPeakMB'), 'MiB'))
-  console.log(`forced shutdown: ${forcedStopMs.toFixed(2)}ms`)
+  console.log(`forced shutdown: ${fixedWithUnit(forcedStopMs, 'ms')}`)
 }
