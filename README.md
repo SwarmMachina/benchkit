@@ -379,7 +379,7 @@ Releases are tag-driven and must use the version already embedded in
 
 ```bash
 pnpm run release:gate
-pnpm run release:verify-tag -- v0.3.0
+pnpm run release:verify-tag v0.3.0
 ```
 
 Push the reviewed commits, create the matching `v<version>` tag, and push that
