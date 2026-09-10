@@ -20,13 +20,13 @@ export class WebSocketLoadWorker
   }
 
   onMessage(payloadBytes: number, sentAt: number): void {
-    if (this.measurementActive) {
+    if (this.recordingActive) {
       this.measurement.recordMessage(performance.now() - sentAt, payloadBytes)
     }
   }
 
   onMessageSent(payloadBytes: number): void {
-    if (this.measurementActive) {
+    if (this.recordingActive) {
       this.measurement.recordMessageSent(payloadBytes)
     }
   }

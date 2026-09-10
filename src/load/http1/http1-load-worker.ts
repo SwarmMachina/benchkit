@@ -34,7 +34,7 @@ export class Http1LoadWorker
   onResponse(statusCode: number, sentAt: number): boolean {
     const now = performance.now()
 
-    if (this.measurementActive) {
+    if (this.recordingActive) {
       this.measurement.recordResponse(statusCode, now - sentAt)
     }
 
@@ -44,19 +44,19 @@ export class Http1LoadWorker
   }
 
   onBytesRead(bytes: number): void {
-    if (this.measurementActive) {
+    if (this.recordingActive) {
       this.measurement.recordBytesReceived(bytes)
     }
   }
 
   onRequestsSent(count: number, bytes: number): void {
-    if (this.measurementActive) {
+    if (this.recordingActive) {
       this.measurement.recordSent(count, bytes)
     }
   }
 
   onSocketWrite(): void {
-    if (this.measurementActive) {
+    if (this.recordingActive) {
       this.measurement.recordSendCall()
     }
   }

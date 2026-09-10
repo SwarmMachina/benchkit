@@ -50,8 +50,8 @@ export abstract class LoadWorker<
     return this.#running && this.data.ratePerSecond !== undefined
   }
 
-  protected get measurementActive(): boolean {
-    return this.#phase === 'measurement'
+  protected get recordingActive(): boolean {
+    return this.#running
   }
 
   protected get shouldReconnect(): boolean {
@@ -104,37 +104,37 @@ export abstract class LoadWorker<
   }
 
   onConnectionError(): void {
-    if (this.measurementActive) {
+    if (this.recordingActive) {
       this.measurement.recordConnectionError()
     }
   }
 
   onTimeout(): void {
-    if (this.measurementActive) {
+    if (this.recordingActive) {
       this.measurement.recordTimeout()
     }
   }
 
   onProtocolError(): void {
-    if (this.measurementActive) {
+    if (this.recordingActive) {
       this.measurement.recordProtocolError()
     }
   }
 
   onScheduledOperation(lagMs: number): void {
-    if (this.measurementActive) {
+    if (this.recordingActive) {
       this.measurement.recordScheduleLag(lagMs)
     }
   }
 
   onBufferedAmount(bytes: number): void {
-    if (this.measurementActive) {
+    if (this.recordingActive) {
       this.measurement.recordBufferedAmount(bytes)
     }
   }
 
   onBackpressureStarted(): boolean {
-    if (!this.measurementActive) {
+    if (!this.recordingActive) {
       return false
     }
 
@@ -148,7 +148,7 @@ export abstract class LoadWorker<
   }
 
   protected recordAborted(count: number): void {
-    if (this.measurementActive && count > 0) {
+    if (this.recordingActive && count > 0) {
       this.measurement.recordAborted(count)
     }
   }
@@ -184,12 +184,14 @@ export abstract class LoadWorker<
       }
 
       this.#phase = 'measurement'
-      this.measurement.start()
-      this.#memoryTimer = setInterval(() => this.measurement.sampleMemory(), this.data.memorySampleMs)
     } else {
       this.#phase = 'warmup'
     }
 
+    // Exercise the same recording path during warmup. start() discards its
+    // counters, histogram, and memory samples before the measured phase.
+    this.measurement.start()
+    this.#memoryTimer = setInterval(() => this.measurement.sampleMemory(), this.data.memorySampleMs)
     this.#running = true
     this.#startedAt = performance.now()
     this.#stopAt = this.#startedAt + command.durationMs
@@ -307,7 +309,7 @@ export abstract class LoadWorker<
       if (connection) {
         connection.scheduleOperation(scheduledAt)
       } else {
-        if (this.measurementActive) {
+        if (this.recordingActive) {
           this.measurement.recordRateDropped(due + 1)
         }
 
