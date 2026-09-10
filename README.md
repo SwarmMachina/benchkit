@@ -96,9 +96,10 @@ Requests that cannot fit within connection and pipeline capacity are counted in
 Fixed-rate latency includes scheduling delay by default. Set
 `correctCoordinatedOmission: false` to measure from the actual socket write.
 
-Warmup and measurement use the same workers and sockets. Workers drain
-outstanding warmup responses and reset counters before measurement, preserving
-connection and JIT state.
+HTTP and WebSocket warmup use the same workers, sockets, counters, latency
+histograms, and memory sampling as measurement. Workers drain outstanding warmup
+responses and reset the recorded metrics before measurement, preserving connections
+and warming the recording code without including warmup results.
 
 #### Result groups
 
